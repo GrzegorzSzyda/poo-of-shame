@@ -1,0 +1,36 @@
+image: oven/bun:1.1
+
+stages: [install, lint, typecheck, test, build]
+
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - node_modules/
+    - .bun/
+
+install:
+  stage: install
+  script:
+    - bun install --frozen-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+
+lint:
+  stage: lint
+  script: bun run lint
+
+typecheck:
+  stage: typecheck
+  script: bun run typecheck
+
+test:
+  stage: test
+  script: bun run test
+
+build:
+  stage: build
+  script: bun run build
+  artifacts:
+    paths:
+      - dist

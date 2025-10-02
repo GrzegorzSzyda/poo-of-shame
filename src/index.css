@@ -1,2 +1,4 @@
-@import "tailwindcss";
-:root { color-scheme: light dark; }
+@import 'tailwindcss';
+:root {
+    color-scheme: light dark;
+}

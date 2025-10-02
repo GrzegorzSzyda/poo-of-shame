@@ -1,14 +1,23 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import '~/index.css'
-import App from '~/app'
-import { QueryClientProvider } from '@tanstack/react-query'
-import { queryClient } from '~/lib/queryClient'
+import { App } from './App'
+import './index.css'
+
+const qc = new QueryClient({
+    defaultOptions: {
+        queries: {
+            retry: 2,
+            refetchOnWindowFocus: false,
+            staleTime: 30_000,
+        },
+    },
+})
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </React.StrictMode>
+    <React.StrictMode>
+        <QueryClientProvider client={qc}>
+            <App />
+        </QueryClientProvider>
+    </React.StrictMode>,
 )

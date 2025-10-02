@@ -1,11 +1,17 @@
-# Poo of shame
+# Poo of Shame
 
-Stack: Vite + React + TypeScript, Bun, Tailwind v4, ESLint (flat), Prettier, Husky + lint-staged, Vitest (unit), React Query.
+Modern starter with **React + TypeScript + Vite + Bun** using Tailwind CSS, ESLint, Prettier, Husky and Vitest.
 
-## Setup
+## Quick start
+
 ```bash
 bun install
-bunx husky-init && bun install   # generate .husky and install hooks
 cp .env.local.example .env.local
 bun run dev
 ```
+
+## Documentation
+
+- [Setup](docs/setup.md)
+- [Workflow](docs/workflow.md)
+- [CI/CD](docs/ci.md)

@@ -1,6 +1,6 @@
-image: oven/bun:1.1
+image: oven/bun:1.2
 
-stages: [install, lint, typecheck, test, build]
+stages: [install, check, build]
 
 cache:
   key: ${CI_COMMIT_REF_SLUG}
@@ -16,17 +16,19 @@ install:
     paths:
       - node_modules/
 
-lint:
-  stage: lint
-  script: bun run lint
-
-typecheck:
-  stage: typecheck
-  script: bun run typecheck
-
-test:
-  stage: test
-  script: bun run test
+check:
+  stage: check
+  script:
+    - bun run check
+  artifacts:
+    when: always
+    reports:
+      junit: reports/junit.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura-coverage.xml
+    paths:
+      - coverage/
 
 build:
   stage: build

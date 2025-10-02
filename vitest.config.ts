@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
-const isCI = !!process.env.CI
+const env = process.env as Record<string, string | undefined>
+const isCI = !!env['CI']
 
 export default defineConfig({
     test: {

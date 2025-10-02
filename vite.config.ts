@@ -1,9 +1,10 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
-const isCI = !!process.env.CI
-const DEV_PORT = Number(process.env.VITE_PORT || 5173)
-const PREVIEW_PORT = Number(process.env.VITE_PREVIEW_PORT || 4173)
+const env = process.env as Record<string, string | undefined>
+const isCI = !!env['CI']
+const DEV_PORT = Number(env['VITE_PORT'] ?? 5173)
+const PREVIEW_PORT = Number(env['VITE_PREVIEW_PORT'] ?? 4173)
 
 export default defineConfig({
     plugins: [react()],

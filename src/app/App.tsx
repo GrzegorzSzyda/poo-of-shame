@@ -1,5 +1,5 @@
-import logo from './assets/logo.svg'
 import './index.css'
+import logo from '../assets/logo.svg'
 
 export const App = () => (
     <main className='mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center gap-8 p-8 text-center'>

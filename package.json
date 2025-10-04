@@ -4,9 +4,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "dev": "bun --hot src/index.tsx",
-        "start": "NODE_ENV=production bun src/index.tsx",
-        "build": "bun build src/index.html --outdir dist",
+        "dev": "bun --hot src/app/entryServer.tsx",
+        "start": "NODE_ENV=production bun src/app/entryServer.tsx",
+        "build": "bun build src/app/index.html --outdir dist",
         "lint": "oxlint",
         "prettier": "prettier --write .",
         "prettier:check": "prettier --check .",

@@ -2,6 +2,6 @@
 . "$(dirname "$0")/_/husky.sh"
 
 bun run lint
-bun run prettier:check
+bun run prettier
 bun run typecheck
-bun run test
+bun run test:ci

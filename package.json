@@ -13,7 +13,8 @@
         "typecheck": "bun run tsc --noEmit",
         "prepare": "husky",
         "test": "bun test",
-        "test:watch": "bun test --watch"
+        "test:watch": "bun test --watch",
+        "test:ci": "sh -c 'if find . -type f -name \"*.test.*\" | grep -q .; then bun test; else echo \"No tests found, skipping bun test\"; fi'"
     },
     "dependencies": {
         "bun-plugin-tailwind": "^0.0.15",

@@ -1,29 +1,43 @@
 {
     "compilerOptions": {
-        "target": "ES2022",
-        "lib": ["ES2024", "DOM", "DOM.Iterable"],
-        "module": "ESNext",
-        "moduleResolution": "bundler",
+        // Environment setup & latest features
+        "lib": ["ESNext", "DOM"],
+        "target": "ESNext",
+        "module": "Preserve",
         "moduleDetection": "force",
-        "verbatimModuleSyntax": true,
         "jsx": "react-jsx",
+        "allowJs": true,
+
+        // Bundler mode
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "verbatimModuleSyntax": true,
+        "noEmit": true,
+
+        // Best practices
         "strict": true,
+        "skipLibCheck": true,
+        "noFallthroughCasesInSwitch": true,
         "noUncheckedIndexedAccess": true,
-        "exactOptionalPropertyTypes": true,
         "noImplicitOverride": true,
-        "noImplicitReturns": true,
+
+        "baseUrl": ".",
+        "paths": {
+            "~/*": ["./src/*"]
+        },
+
+        // Additional stricter flags
         "noUnusedLocals": true,
         "noUnusedParameters": true,
-        "isolatedModules": true,
         "noPropertyAccessFromIndexSignature": true,
-        "noFallthroughCasesInSwitch": true,
+        "useUnknownInCatchVariables": true,
+        "noImplicitReturns": true,
+        "exactOptionalPropertyTypes": true,
         "forceConsistentCasingInFileNames": true,
-        "skipLibCheck": true,
         "resolveJsonModule": true,
-        "types": ["node", "vite/client"],
-        "baseUrl": ".",
-        "paths": { "~/*": ["src/*"] }
+        "isolatedModules": true,
+        "useDefineForClassFields": true
     },
-    "include": ["src", "vite.config.ts", "tailwind.config.ts", "vitest.config.ts"],
-    "exclude": ["node_modules", "dist"]
+
+    "exclude": ["dist", "node_modules"]
 }

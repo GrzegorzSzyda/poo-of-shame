@@ -1,4 +1,35 @@
 @import 'tailwindcss';
-:root {
-    color-scheme: light dark;
+
+@theme {
+    --color-primary: #924ff7;
+    --color-primary-alt: #7934dd;
+    --color-primary-bg-dark: #2e1065;
+    --color-primary-bg-light: #f3e8ff;
+
+    --color-danger: #ef4444;
+    --color-danger-alt: #dc2626;
+    --color-danger-bg-dark: #450a0a;
+    --color-danger-bg-light: #fee2e2;
+
+    --color-success: #22c55e;
+    --color-success-alt: #16a34a;
+    --color-success-bg-dark: #052e16;
+    --color-success-bg-light: #dcfce7;
+
+    --color-warning: #facc15;
+    --color-warning-alt: #eab308;
+    --color-warning-bg-dark: #422006;
+    --color-warning-bg-light: #fefce8;
+
+    --color-bg: #120e16;
+}
+
+@layer base {
+    body {
+        @apply bg-bg text-primary-bg-light m-0 min-h-screen antialiased;
+    }
+
+    code {
+        @apply text-primary font-mono text-sm;
+    }
 }

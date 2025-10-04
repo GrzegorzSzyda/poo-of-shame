@@ -3,6 +3,7 @@
     "printWidth": 90,
     "semi": false,
     "singleQuote": true,
+    "jsxSingleQuote": true,
     "trailingComma": "all",
     "tabWidth": 4,
     "quoteProps": "consistent",
@@ -10,6 +11,7 @@
     "importOrderSeparation": false,
     "importOrderSortSpecifiers": true,
     "importOrderParserPlugins": ["typescript", "jsx"],
+    "tailwindFunctions": ["cn", "clsx"],
     "overrides": [
         {
             "files": "*.yml",

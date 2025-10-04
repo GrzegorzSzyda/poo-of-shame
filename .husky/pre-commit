@@ -1,4 +1,7 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-bunx lint-staged
+bun run lint
+bun run prettier:check
+bun run typecheck
+bun run test

@@ -1,61 +1,34 @@
 {
-    "name": "poo-of-shame",
+    "name": "bun-react-template",
     "version": "0.1.0",
     "private": true,
-    "packageManager": "bun@1.2.23",
-    "engines": {
-        "bun": ">=1.2.23"
-    },
+    "type": "module",
     "scripts": {
-        "dev": "bunx vite",
-        "build": "bunx vite build",
-        "preview": "bunx vite preview",
-        "lint": "bunx eslint .",
-        "format": "bunx prettier --write .",
-        "format:check": "bunx prettier --check .",
-        "typecheck": "bunx tsc -p tsconfig.json --noEmit",
-        "typecheck:test": "bunx tsc -p tsconfig.vitest.json --noEmit",
-        "test": "bunx vitest run",
-        "test:ci": "bunx vitest run --passWithNoTests",
-        "check": "bun run format:check && bun run lint && bun run typecheck && bun run typecheck:test && bun run test:ci",
-        "fix": "bun run format && bun run lint -- --fix",
+        "dev": "bun --hot src/index.tsx",
+        "start": "NODE_ENV=production bun src/index.tsx",
+        "build": "bun build src/index.html --outdir dist",
+        "lint": "oxlint",
+        "prettier": "prettier --write .",
+        "prettier:check": "prettier --check .",
+        "typecheck": "bun run tsc --noEmit",
         "prepare": "husky",
-        "precommit": "bunx lint-staged"
-    },
-    "lint-staged": {
-        "*.{ts,tsx,js,jsx}": [
-            "bunx prettier --write",
-            "bunx eslint --fix"
-        ],
-        "*.{json,md,css}": [
-            "bunx prettier --write"
-        ]
+        "test": "bun test",
+        "test:watch": "bun test --watch"
     },
     "dependencies": {
-        "@tanstack/react-query": "^5.59.16",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0"
+        "bun-plugin-tailwind": "^0.0.15",
+        "react": "^19",
+        "react-dom": "^19",
+        "tailwindcss": "^4.1.11"
     },
     "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
-        "@types/node": "^24.6.1",
-        "@types/react": "^19.1.17",
-        "@types/react-dom": "^19.1.10",
-        "@vitejs/plugin-react": "^5.0.4",
-        "eslint": "^9.9.0",
-        "eslint-plugin-import": "^2.29.1",
-        "eslint-plugin-jsx-a11y": "^6.9.0",
-        "eslint-plugin-react": "^7.34.3",
-        "eslint-plugin-react-hooks": "^5.2.0",
-        "globals": "^16.4.0",
+        "@types/bun": "latest",
+        "@types/react": "^19",
+        "@types/react-dom": "^19",
         "husky": "^9.1.7",
-        "lint-staged": "^16.2.3",
-        "prettier": "^3.2.5",
-        "prettier-plugin-tailwindcss": "^0.6.8",
-        "tailwindcss": "^4.0.0",
-        "typescript": "^5.6.2",
-        "typescript-eslint": "^8.8.0",
-        "vite": "^7.1.7",
-        "vitest": "^3.2.4"
+        "oxlint": "^1.19.0",
+        "prettier": "3.6.2",
+        "prettier-plugin-tailwindcss": "^0.6.14"
     }
 }

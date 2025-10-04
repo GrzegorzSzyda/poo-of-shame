@@ -1,0 +1,42 @@
+{
+    "categories": {
+        "correctness": "error",
+        "suspicious": "error",
+        "style": "warn",
+        "pedantic": "warn"
+    },
+    "plugins": ["import", "react", "react_perf", "jsx_a11y", "unicorn"],
+    "rules": {
+        "import/no-default-export": "error",
+        "import/no-cycle": "warn",
+        "import/no-named-export": "off",
+        "import/prefer-default-export": "off",
+        "import/no-unassigned-import": "off",
+        "import/order": "off",
+        "func-style": ["error", "expression", { "allowArrowFunctions": true }],
+        "arrow-body-style": ["warn", "as-needed"],
+        "prefer-destructuring": ["warn", { "AssignmentExpression": { "array": false } }],
+        "sort-imports": "off",
+        "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+        "sort-keys": "off",
+        "react/jsx-key": "error",
+        "react/jsx-no-duplicate-props": "error",
+        "react/jsx-no-useless-fragment": "warn",
+        "react/react-in-jsx-scope": "off",
+        "react/jsx-uses-react": "off",
+        "jsx_a11y/alt-text": "warn",
+        "jsx_a11y/anchor-has-content": "warn",
+        "jsx_a11y/anchor-is-valid": "warn",
+        "unicorn/no-useless-undefined": "warn",
+        "unicorn/no-useless-fallback-in-spread": "warn",
+        "unicorn/filename-case": [
+            "warn",
+            {
+                "cases": {
+                    "camelCase": true,
+                    "pascalCase": true
+                }
+            }
+        ]
+    }
+}

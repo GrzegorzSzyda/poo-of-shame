@@ -1,17 +1,21 @@
-# Poo of Shame
+# bun-react-tailwind-template
 
-Modern starter with **React + TypeScript + Vite + Bun** using Tailwind CSS, ESLint, Prettier, Husky and Vitest.
-
-## Quick start
+To install dependencies:
 
 ```bash
 bun install
-cp .env.local.example .env.local
-bun run dev
 ```
 
-## Documentation
+To start a development server:
 
-- [Setup](docs/setup.md)
-- [Workflow](docs/workflow.md)
-- [CI/CD](docs/ci.md)
+```bash
+bun dev
+```
+
+To run for production:
+
+```bash
+bun start
+```
+
+This project was created using `bun init` in bun v1.2.23. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

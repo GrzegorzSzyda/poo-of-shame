@@ -25,6 +25,22 @@
 }
 
 @layer base {
+    *,
+    ::before,
+    ::after {
+        box-sizing: border-box;
+    }
+
+    html {
+        scroll-behavior: smooth;
+    }
+
+    :root {
+        font-size: 20px;
+        color-scheme: dark;
+        text-rendering: optimizeLegibility;
+    }
+
     body {
         @apply bg-bg text-primary-light m-0 min-h-screen antialiased;
         font-family:
@@ -34,9 +50,70 @@
             BlinkMacSystemFont,
             'Segoe UI',
             sans-serif;
+        line-height: 2;
     }
 
     code {
         @apply text-primary font-mono text-sm;
+    }
+
+    img,
+    picture,
+    video,
+    canvas,
+    svg {
+        display: block;
+        max-width: 100%;
+    }
+
+    ul,
+    ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    input,
+    button,
+    textarea,
+    select {
+        font: inherit;
+        color: inherit;
+        background-color: transparent;
+    }
+
+    button,
+    input,
+    textarea,
+    select {
+        border: 0;
+    }
+
+    button {
+        cursor: pointer;
+    }
+
+    button:disabled,
+    input:disabled,
+    textarea:disabled,
+    select:disabled {
+        cursor: not-allowed;
+    }
+
+    ::placeholder {
+        color: color-mix(in srgb, var(--color-primary-light) 60%, transparent);
+    }
+
+    a {
+        @apply text-primary underline-offset-4 transition-colors duration-200;
+    }
+
+    a:hover {
+        @apply text-primary-alt;
+    }
+
+    ::selection {
+        background-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+        color: var(--color-primary-light);
     }
 }

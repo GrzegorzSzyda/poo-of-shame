@@ -1,9 +1,9 @@
-import { serve } from 'bun'
-import index from './index.html'
+import { serve } from "bun"
+import index from "./index.html"
 
 const server = serve({
     routes: {
-        '/*': index,
+        "/*": index,
     },
 })
 

@@ -1,5 +1,5 @@
 {
-    "name": "bun-react-template",
+    "name": "poo-of-shame",
     "version": "0.1.0",
     "private": true,
     "type": "module",
@@ -17,6 +17,8 @@
         "test:ci": "sh -c 'if find . -type f -name \"*.test.*\" | grep -q .; then bun test; else echo \"No tests found, skipping bun test\"; fi'"
     },
     "dependencies": {
+        "@tanstack/react-router": "^1.132.37",
+        "@tanstack/router-devtools": "^1.132.37",
         "bun-plugin-tailwind": "^0.0.15",
         "react": "^19",
         "react-dom": "^19",

@@ -12,6 +12,7 @@
         "import/no-named-export": "off",
         "import/prefer-default-export": "off",
         "import/no-unassigned-import": "off",
+        "import/consistent-type-specifier-style": "off",
         "import/order": "off",
         "func-style": ["error", "expression", { "allowArrowFunctions": true }],
         "arrow-body-style": ["warn", "as-needed"],

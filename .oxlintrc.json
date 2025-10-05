@@ -12,6 +12,7 @@
         "import/no-named-export": "off",
         "import/prefer-default-export": "off",
         "import/no-unassigned-import": "off",
+        "import/consistent-type-specifier-style": "off",
         "import/order": "off",
         "func-style": ["error", "expression", { "allowArrowFunctions": true }],
         "arrow-body-style": ["warn", "as-needed"],
@@ -29,6 +30,7 @@
         "jsx_a11y/anchor-is-valid": "warn",
         "unicorn/no-useless-undefined": "warn",
         "unicorn/no-useless-fallback-in-spread": "warn",
+        "quotes": ["error", "double", { "avoidEscape": true }],
         "unicorn/filename-case": [
             "warn",
             {
@@ -37,6 +39,7 @@
                     "pascalCase": true
                 }
             }
-        ]
+        ],
+        "@typescript-eslint/consistent-type-definitions": ["error", "type"]
     }
 }

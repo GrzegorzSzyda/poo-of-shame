@@ -1,10 +1,13 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @theme {
     --color-primary: #924ff7;
     --color-primary-alt: #7934dd;
-    --color-primary-dark: #2e1065;
+    --color-primary-dark: #24153e;
     --color-primary-light: #f3e8ff;
+    --shadow-primary: 0 14px 36px rgba(146, 79, 247, 0.45);
+    --shadow-primary-strong: 0 30px 60px rgba(146, 79, 247, 0.55);
+    --shadow-soft: 0 10px 24px rgba(146, 79, 247, 0.25);
 
     --color-danger: #ef4444;
     --color-danger-alt: #dc2626;
@@ -44,11 +47,11 @@
     body {
         @apply bg-bg text-primary-light m-0 min-h-screen antialiased;
         font-family:
-            'Baloo 2',
+            "Baloo 2",
             system-ui,
             -apple-system,
             BlinkMacSystemFont,
-            'Segoe UI',
+            "Segoe UI",
             sans-serif;
         line-height: 2;
     }
@@ -115,5 +118,61 @@
     ::selection {
         background-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
         color: var(--color-primary-light);
+    }
+}
+
+@layer components {
+    .logo-bounce {
+        animation: logo-bounce 1.6s ease-in-out infinite;
+        filter: drop-shadow(var(--shadow-primary));
+    }
+
+    .logo-spin-once {
+        animation: logo-spin 0.6s ease-in-out forwards;
+    }
+
+    .logo-bounce-shadow {
+        animation: logo-bounce-shadow 1.6s ease-in-out infinite;
+    }
+}
+
+@keyframes logo-bounce {
+    0%,
+    100% {
+        transform: translateY(0);
+        filter: drop-shadow(var(--shadow-primary));
+    }
+
+    50% {
+        transform: translateY(12%);
+        filter: drop-shadow(var(--shadow-primary-strong));
+    }
+}
+
+@keyframes logo-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes logo-bounce-shadow {
+    0%,
+    100% {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+
+    45% {
+        transform: scale(1);
+        opacity: 0.8;
+    }
+
+    55% {
+        transform: scale(1.15);
+        opacity: 0.1;
     }
 }

@@ -1,20 +1,18 @@
-import { PageContainer } from "~/components/layout/PageContainer"
-import { PageHeader } from "~/components/layout/PageHeader"
-import { Paragraph } from "~/components/typography/Paragraph"
-import { SectionTitle } from "~/components/typography/title/SectionTitle"
+import { PageContainer } from '~/components/layout/PageContainer'
+import { PageHeader } from '~/components/layout/PageHeader'
+import { Paragraph } from '~/components/typography/Paragraph'
+import { PageTitle } from '~/components/typography/title/PageTitle'
+import { AddGameForm } from '~/features/AddGameForm/AddGameForm'
 
 export const AddGamePage = () => (
     <PageContainer className="space-y-8">
         <PageHeader>
-            <SectionTitle>Dorzuć na stos</SectionTitle>
+            <PageTitle>Dorzuć grę na kupkę</PageTitle>
             <Paragraph>
-                Dodaj nową grę do kupki – podaj tytuł, platformę i opcjonalne notatki.
+                Dodaj KOLEJNĄ nową grę do swojej kupki wstydu, na pewno kiedyś w nią
+                zagrasz... oczywiście.
             </Paragraph>
         </PageHeader>
-
-        <Paragraph>
-            Formularz jest w przygotowaniu. W kolejnych iteracjach pojawi się integracja z
-            zewnętrznymi API, by łatwo wyszukiwać gry i dociągać metadane.
-        </Paragraph>
+        <AddGameForm />
     </PageContainer>
 )

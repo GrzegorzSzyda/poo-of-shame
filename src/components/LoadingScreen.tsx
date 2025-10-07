@@ -1,17 +1,17 @@
-import { type MouseEvent, useCallback } from "react"
-import logo from "~/assets/logo.svg"
+import { type MouseEvent, useCallback } from 'react'
+import logo from '~/assets/logo.svg'
 
 type LoadingScreenProps = {
     message?: string
 }
 
-export const LoadingScreen = ({ message = "Ładowanie..." }: LoadingScreenProps) => {
+export const LoadingScreen = ({ message = 'Ładowanie...' }: LoadingScreenProps) => {
     const handleLogoDoubleClick = useCallback((event: MouseEvent<HTMLImageElement>) => {
         const logoElement = event.currentTarget
-        logoElement.classList.add("logo-spin-once")
+        logoElement.classList.add('logo-spin-once')
         logoElement.addEventListener(
-            "animationend",
-            () => logoElement.classList.remove("logo-spin-once"),
+            'animationend',
+            () => logoElement.classList.remove('logo-spin-once'),
             { once: true },
         )
     }, [])

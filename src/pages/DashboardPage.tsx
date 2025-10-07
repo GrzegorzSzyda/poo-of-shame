@@ -1,12 +1,12 @@
-import { PageContainer } from "~/components/layout/PageContainer"
-import { PageHeader } from "~/components/layout/PageHeader"
-import { Paragraph } from "~/components/typography/Paragraph"
-import { SectionTitle } from "~/components/typography/title/SectionTitle"
+import { PageContainer } from '~/components/layout/PageContainer'
+import { PageHeader } from '~/components/layout/PageHeader'
+import { Paragraph } from '~/components/typography/Paragraph'
+import { PageTitle } from '~/components/typography/title/PageTitle'
 
 export const DashboardPage = () => (
     <PageContainer className="space-y-8">
         <PageHeader>
-            <SectionTitle>Pulpit</SectionTitle>
+            <PageTitle>Pulpit</PageTitle>
             <Paragraph>
                 Twoja główna baza – zbieramy tu statystyki i skróty do najważniejszych
                 działań.

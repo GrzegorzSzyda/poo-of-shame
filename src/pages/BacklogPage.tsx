@@ -1,12 +1,12 @@
-import { PageContainer } from "~/components/layout/PageContainer"
-import { PageHeader } from "~/components/layout/PageHeader"
-import { Paragraph } from "~/components/typography/Paragraph"
-import { SectionTitle } from "~/components/typography/title/SectionTitle"
+import { PageContainer } from '~/components/layout/PageContainer'
+import { PageHeader } from '~/components/layout/PageHeader'
+import { Paragraph } from '~/components/typography/Paragraph'
+import { PageTitle } from '~/components/typography/title/PageTitle'
 
 export const BacklogPage = () => (
     <PageContainer className="space-y-8">
         <PageHeader>
-            <SectionTitle>Twoja kupka</SectionTitle>
+            <PageTitle>Twoja kupka</PageTitle>
             <Paragraph>
                 Lista gier, do których chcesz wrócić. Oznaczaj, sortuj, planuj – kolejka
                 musi być pod kontrolą.

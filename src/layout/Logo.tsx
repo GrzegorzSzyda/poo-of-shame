@@ -1,5 +1,5 @@
-import { Link } from "@tanstack/react-router"
-import logo from "../assets/logo.svg"
+import { Link } from '@tanstack/react-router'
+import logo from '../assets/logo.svg'
 
 export const Logo = () => (
     <Link to="/" preload="intent" className="flex items-center gap-3">

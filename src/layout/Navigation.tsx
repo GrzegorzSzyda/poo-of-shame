@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router"
+import { Link } from '@tanstack/react-router'
 
 const linkBase =
-    "transition-colors duration-200 text-primary-light/80 hover:text-primary-light"
+    'transition-colors duration-200 text-primary-light/80 hover:text-primary-light'
 
 export const Navigation = () => (
     <nav aria-label="Główna nawigacja">
@@ -11,7 +11,7 @@ export const Navigation = () => (
                     to="/"
                     preload="intent"
                     className={linkBase}
-                    activeProps={{ className: "text-primary" }}
+                    activeProps={{ className: 'text-primary' }}
                 >
                     Pulpit
                 </Link>
@@ -21,7 +21,7 @@ export const Navigation = () => (
                     to="/backlog"
                     preload="intent"
                     className={linkBase}
-                    activeProps={{ className: "text-primary" }}
+                    activeProps={{ className: 'text-primary' }}
                 >
                     Twoja kupka
                 </Link>

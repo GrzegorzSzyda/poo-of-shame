@@ -1,9 +1,7 @@
 {
     "categories": {
         "correctness": "error",
-        "suspicious": "error",
-        "style": "warn",
-        "pedantic": "warn"
+        "suspicious": "error"
     },
     "plugins": ["import", "react", "react_perf", "jsx_a11y", "unicorn"],
     "rules": {
@@ -30,7 +28,11 @@
         "jsx_a11y/anchor-is-valid": "warn",
         "unicorn/no-useless-undefined": "warn",
         "unicorn/no-useless-fallback-in-spread": "warn",
-        "quotes": ["error", "double", { "avoidEscape": true }],
+        "quotes": [
+            "error",
+            "single",
+            { "avoidEscape": true, "allowTemplateLiterals": true }
+        ],
         "unicorn/filename-case": [
             "warn",
             {

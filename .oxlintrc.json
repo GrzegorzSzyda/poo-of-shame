@@ -1,9 +1,7 @@
 {
     "categories": {
         "correctness": "error",
-        "suspicious": "error",
-        "style": "warn",
-        "pedantic": "warn"
+        "suspicious": "error"
     },
     "plugins": ["import", "react", "react_perf", "jsx_a11y", "unicorn"],
     "rules": {

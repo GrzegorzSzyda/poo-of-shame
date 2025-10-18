@@ -5,7 +5,7 @@ import {
     createRouter,
 } from '@tanstack/react-router'
 import { Suspense, lazy } from 'react'
-import { LoadingScreen } from '~/components/LoadingScreen'
+import { LoadingScreen } from '~/layout/LoadingScreen'
 
 const RootComponent = lazy(() =>
     import('./App').then((module) => ({ default: module.App })),
@@ -14,12 +14,6 @@ const DashboardPage = lazy(() =>
     import('../pages/DashboardPage').then((module) => ({
         default: module.DashboardPage,
     })),
-)
-const BacklogPage = lazy(() =>
-    import('../pages/BacklogPage').then((module) => ({ default: module.BacklogPage })),
-)
-const AddGamePage = lazy(() =>
-    import('../pages/AddGamePage').then((module) => ({ default: module.AddGamePage })),
 )
 
 const rootRoute = createRootRoute({
@@ -42,41 +36,14 @@ const dashboardRoute = createRoute({
     ),
 })
 
-const backlogRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/backlog',
-    component: () => (
-        <Suspense fallback={<LoadingScreen message="Ładuję Twoją kupkę" />}>
-            <BacklogPage />
-        </Suspense>
-    ),
-})
+const routeTree = rootRoute.addChildren([dashboardRoute])
 
-const addGameRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: '/add',
-    component: () => (
-        <Suspense
-            fallback={<LoadingScreen message="Szukam wolnego slota na kupce wstydu" />}
-        >
-            <AddGamePage />
-        </Suspense>
-    ),
-})
+const router = createRouter({ routeTree, defaultPreload: 'intent' })
 
-const routeTree = rootRoute.addChildren([dashboardRoute, backlogRoute, addGameRoute])
-
-const router = createRouter({
-    routeTree,
-    defaultPreload: 'intent',
-})
-
-const Router = () => <RouterProvider router={router} />
+export const Router = () => <RouterProvider router={router} />
 
 declare module '@tanstack/react-router' {
     interface Register {
         router: typeof router
     }
 }
-
-export { Router, router }

@@ -32,7 +32,6 @@
         "noPropertyAccessFromIndexSignature": true,
         "useUnknownInCatchVariables": true,
         "noImplicitReturns": true,
-        "exactOptionalPropertyTypes": true,
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "isolatedModules": true,

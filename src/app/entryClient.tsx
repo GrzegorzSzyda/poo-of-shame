@@ -7,7 +7,6 @@ const start = () => {
     if (!container) {
         throw new Error('Missing #root container')
     }
-
     createRoot(container).render(<Router />)
 }
 

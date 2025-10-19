@@ -1,3 +1,4 @@
+// oxlint-disable no-console
 // oxlint-disable no-default-export
 // oxlint-disable func-style
 const env = process.env || {}

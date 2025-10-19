@@ -1,4 +1,3 @@
-import type { MouseEvent } from 'react'
 import { useApiUserGames } from '~/api/store/useApiUserGames'
 import type { Game } from '~/types/Game'
 import { UserGameStatus } from '~/types/UserGameStatus'

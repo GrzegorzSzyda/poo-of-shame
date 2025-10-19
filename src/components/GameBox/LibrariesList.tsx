@@ -1,7 +1,7 @@
 import type { UserGame } from '~/types/UserGame'
 
 type LibrariesProps = {
-    userGame: UserGame | null
+    userGame?: UserGame
 }
 
 export const LibrariesList = ({ userGame }: LibrariesProps) => {

@@ -16,7 +16,7 @@ import type { UserGame } from '~/types/UserGame'
 import { UserGameStatus } from '~/types/UserGameStatus'
 
 type StatusProps = {
-    userGame: UserGame | null
+    userGame?: UserGame
 }
 
 export const Status = ({ userGame }: StatusProps) => {

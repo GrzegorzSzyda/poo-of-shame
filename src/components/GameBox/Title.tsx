@@ -1,6 +1,6 @@
 type TitleProps = {
-    title: string | null
-    releaseDate: string | null
+    title?: string
+    releaseDate?: string
 }
 
 export const Title = ({ title, releaseDate }: TitleProps) => (

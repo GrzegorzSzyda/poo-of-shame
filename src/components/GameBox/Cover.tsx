@@ -1,6 +1,6 @@
 type CoverProps = {
-    coverUrl: string | null
-    title: string | null
+    coverUrl?: string
+    title?: string
 }
 
 export const Cover = ({ coverUrl, title }: CoverProps) => (

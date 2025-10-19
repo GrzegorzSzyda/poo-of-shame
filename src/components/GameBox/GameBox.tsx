@@ -1,3 +1,4 @@
+import { GameActionButtons } from '~/features/GameActionButtons/GameActionButtons'
 import type { Game } from '~/types/Game'
 import type { UserGame } from '~/types/UserGame'
 import { getGameTitle } from '~/utils/getGameTitle'
@@ -8,7 +9,7 @@ import { Title } from './Title'
 
 type GameBoxProps = {
     game: Game
-    userGame: UserGame | null
+    userGame?: UserGame
 }
 
 export const GameBox = ({ game, userGame }: GameBoxProps) => {
@@ -20,6 +21,7 @@ export const GameBox = ({ game, userGame }: GameBoxProps) => {
             <div className="flex min-w-0 flex-1 flex-col gap-2 p-4">
                 <Title title={title} releaseDate={game.releaseDate} />
                 <Status userGame={userGame} />
+                <GameActionButtons game={game} />
                 <LibrariesList userGame={userGame} />
             </div>
         </div>

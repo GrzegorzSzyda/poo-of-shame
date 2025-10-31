@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0c0217;
+  --color-text: #b6a0ce;
+}
+
+@layer base {
+  :root {
+    @apply text-[20px] leading-[2] text-text bg-bg font-sans antialiased;
+  }
+
+  body {
+    @apply min-h-screen m-0;
+  }
+}

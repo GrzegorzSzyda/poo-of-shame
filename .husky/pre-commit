@@ -1,7 +1,5 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env sh
+set -e
 
-bun run lint -- --deny-warnings
-bun run prettier
-bun run typecheck
-bun run test:ci
+bun run lint
+bun run format

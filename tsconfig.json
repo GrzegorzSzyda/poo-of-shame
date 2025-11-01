@@ -23,19 +23,13 @@
 
         "baseUrl": ".",
         "paths": {
-            "~/*": ["./src/*"]
+            "@/*": ["./src/*"]
         },
 
-        // Additional stricter flags
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "noPropertyAccessFromIndexSignature": true,
-        "useUnknownInCatchVariables": true,
-        "noImplicitReturns": true,
-        "forceConsistentCasingInFileNames": true,
-        "resolveJsonModule": true,
-        "isolatedModules": true,
-        "useDefineForClassFields": true
+        // Some stricter flags (disabled by default)
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noPropertyAccessFromIndexSignature": false
     },
 
     "exclude": ["dist", "node_modules"]

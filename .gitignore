@@ -1,7 +1,6 @@
 # dependencies (bun install)
 node_modules
-.husky
-.github
+
 # output
 out
 dist

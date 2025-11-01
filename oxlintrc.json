@@ -1,0 +1,9 @@
+{
+    "$schema": "https://oxc.rs/schemas/oxlintrc.schema.json",
+    "extends": ["oxlint/strict"],
+    "env": {
+        "browser": true
+    },
+    "ignorePatterns": ["dist/**", "coverage/**"],
+    "rules": {}
+}

@@ -1,3 +1,4 @@
 {
+    "tailwindCSS.classFunctions": ["cva", "cx"],
     "cSpell.words": ["apicalypse", "igdb"]
 }

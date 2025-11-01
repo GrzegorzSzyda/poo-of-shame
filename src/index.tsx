@@ -1,15 +1,15 @@
-import { serve } from "bun";
-import index from "./index.html";
+import { serve } from 'bun'
+import index from './index.html'
 
 const server = serve({
-  routes: {
-    "/*": index,
-  },
+    routes: {
+        '/*': index,
+    },
 
-  development: process.env.NODE_ENV !== "production" && {
-    hmr: true,
-    console: true,
-  },
-});
+    development: process.env.NODE_ENV !== 'production' && {
+        hmr: true,
+        console: true,
+    },
+})
 
-console.log(`🚀 Server running at ${server.url}`);
+console.log(`🚀 Server running at ${server.url}`)

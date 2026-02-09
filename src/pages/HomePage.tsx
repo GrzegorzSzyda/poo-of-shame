@@ -1,7 +1,11 @@
-import { GameSearch } from '~/features/GameSearch/GameSearch'
+import { AddGameForm } from '~/features/AddGameForm'
+import { GamesList } from '~/features/GamesList'
 
-export const HomePage = () => (
-    <div>
-        <GameSearch />
-    </div>
-)
+export const HomePage = () => {
+    return (
+        <div>
+            <AddGameForm />
+            <GamesList />
+        </div>
+    )
+}

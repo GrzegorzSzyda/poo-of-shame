@@ -5,7 +5,7 @@ type ResultActionsProps = {
     game: IgdbGame
 }
 
-export const ResultActions = ({ game }: ResultActionsProps) => {
+export const ResultActions = ({}: ResultActionsProps) => {
     const handleAddToPoo = () => {}
 
     return (

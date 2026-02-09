@@ -1,7 +1,7 @@
 import { useMutation } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useState } from 'react'
-import { type IgdbGame } from '~/api/types/IgdbGame'
+import type { IgdbGame } from '~/api/IgdbGame'
 import { Button } from '~/components/Button'
 import { Waiter } from '~/components/Waiter'
 import { api } from '../../convex/_generated/api'

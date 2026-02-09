@@ -1,38 +1,50 @@
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ClerkProvider, useAuth } from '@clerk/clerk-react'
+import { ConvexReactClient } from 'convex/react'
+import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import { type ReactNode, useEffect, useMemo, useState } from 'react'
 
 type Config = {
     convexUrl: string
+    clerkPublishableKey: string
 }
 
+const InnerProviders = ({
+    client,
+    publishableKey,
+    children,
+}: {
+    client: ConvexReactClient
+    publishableKey: string
+    children: ReactNode
+}) => (
+    <ClerkProvider publishableKey={publishableKey}>
+        <ConvexProviderWithClerk client={client} useAuth={useAuth}>
+            {children}
+        </ConvexProviderWithClerk>
+    </ClerkProvider>
+)
+
 export const ConvexProviderFromConfig = ({ children }: { children: ReactNode }) => {
-    const [convexUrl, setConvexUrl] = useState<string | null>(null)
+    const [config, setConfig] = useState<Config | null>(null)
 
     useEffect(() => {
         void (async () => {
             const response = await fetch('/config')
-            if (!response.ok) {
-                throw new Error('Failed to load /config')
-            }
-
             const data = (await response.json()) as Config
-
-            if (typeof data.convexUrl !== 'string' || data.convexUrl.length === 0) {
-                throw new Error('Invalid /config response: convexUrl missing')
-            }
-
-            setConvexUrl(data.convexUrl)
+            setConfig(data)
         })()
     }, [])
 
     const client = useMemo(() => {
-        if (!convexUrl) return null
-        return new ConvexReactClient(convexUrl)
-    }, [convexUrl])
+        if (!config) return null
+        return new ConvexReactClient(config.convexUrl)
+    }, [config])
 
-    if (!client) {
-        return <div style={{ padding: 16 }}>Ładuję konfigurację…</div>
-    }
+    if (!config || !client) return <div>Ładuję konfigurację…</div>
 
-    return <ConvexProvider client={client}>{children}</ConvexProvider>
+    return (
+        <InnerProviders client={client} publishableKey={config.clerkPublishableKey}>
+            {children}
+        </InnerProviders>
+    )
 }

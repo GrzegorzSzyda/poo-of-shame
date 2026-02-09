@@ -89,17 +89,13 @@ const sanitizeResource = (resource: string) => {
     return trimmed
 }
 
-const forwardIgdbRequest = async (
-    resource: string,
-    query: string,
-    token: string,
-) =>
+const forwardIgdbRequest = async (resource: string, query: string, token: string) =>
     fetch(`${IGDB_API_BASE_URL}/${resource}`, {
         method: 'POST',
         headers: {
             'Client-ID': IGDB_CLIENT_ID,
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
             'Content-Type': 'text/plain',
         },
         body: query,
@@ -114,16 +110,13 @@ const handleIgdbPost = async (
     try {
         requestPayload = await req.json()
     } catch {
-        return new Response(
-            JSON.stringify({ error: 'Invalid JSON payload received.' }),
-            {
-                status: 400,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...corsHeaders(origin),
-                },
+        return new Response(JSON.stringify({ error: 'Invalid JSON payload received.' }), {
+            status: 400,
+            headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(origin),
             },
-        )
+        })
     }
 
     const query =
@@ -145,16 +138,13 @@ const handleIgdbPost = async (
     try {
         resource = sanitizeResource(req.params.resource)
     } catch (error) {
-        return new Response(
-            JSON.stringify({ error: (error as Error).message }),
-            {
-                status: 400,
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...corsHeaders(origin),
-                },
+        return new Response(JSON.stringify({ error: (error as Error).message }), {
+            status: 400,
+            headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(origin),
             },
-        )
+        })
     }
 
     let token = await getAccessToken()
@@ -168,15 +158,10 @@ const handleIgdbPost = async (
 
     const responseHeaders = new Headers({
         ...corsHeaders(origin),
-        'Content-Type':
-            igdbResponse.headers.get('Content-Type') ?? 'application/json',
+        'Content-Type': igdbResponse.headers.get('Content-Type') ?? 'application/json',
     })
 
-    const rateLimitHeaders = [
-        'Ratelimit-Limit',
-        'Ratelimit-Remaining',
-        'Ratelimit-Reset',
-    ]
+    const rateLimitHeaders = ['Ratelimit-Limit', 'Ratelimit-Remaining', 'Ratelimit-Reset']
 
     for (const header of rateLimitHeaders) {
         const value = igdbResponse.headers.get(header)

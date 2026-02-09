@@ -1,8 +1,10 @@
 import { serve } from 'bun'
 import index from './index.html'
+import { igdbRoutes } from './server/igdbProxy'
 
 const server = serve({
     routes: {
+        ...igdbRoutes,
         '/*': index,
     },
 

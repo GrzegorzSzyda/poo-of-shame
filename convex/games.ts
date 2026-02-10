@@ -1,62 +1,68 @@
-import { ConvexError, v } from 'convex/values'
+import { v } from 'convex/values'
+import { paginationOptsValidator } from 'convex/server'
 import { mutation, query } from './_generated/server'
-
-const normalizeTitle = (title: string) => title.trim().toLowerCase().replace(/\s+/g, ' ')
-
-const isValidReleaseYear = (year: number) => {
-    if (!Number.isFinite(year)) return false
-    if (!Number.isInteger(year)) return false
-    if (year < 1957) return false
-    if (year > new Date().getFullYear() + 1) return false
-    return true
-}
+import {
+    assertTitleRequired,
+    assertUniqueGameTitleYear,
+    assertValidReleaseYear,
+    normalizeGameTitle,
+    requireGame,
+} from './domain/games'
+import {
+    canManageGamesIdentity,
+    ensureAuthUserId,
+    ensureCanManageGames,
+} from './common/access'
+import {
+    createGame,
+    deleteGameWithLinkedLibraryEntries,
+    findGameByTitleYear,
+    getGameById,
+    listGamesPage,
+    syncLibrarySnapshotsForGame,
+    updateGame,
+} from './repositories/games'
 
 export const list = query({
+    args: { paginationOpts: paginationOptsValidator },
+    handler: async (ctx, args) => {
+        await ensureAuthUserId(ctx)
+        return await listGamesPage(ctx, args.paginationOpts)
+    },
+})
+
+export const canManage = query({
     args: {},
     handler: async (ctx) => {
-        return await ctx.db.query('games').collect()
+        await ensureAuthUserId(ctx)
+        const identity = await ctx.auth.getUserIdentity()
+        return canManageGamesIdentity(identity)
     },
 })
 
 export const create = mutation({
     args: {
         title: v.string(),
-        releaseYear: v.optional(v.number()),
+        releaseYear: v.number(),
         coverImageUrl: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const titleNormalized = normalizeTitle(args.title)
+        const { coverImageUrl, releaseYear, title } = args
 
-        if (titleNormalized.length === 0) {
-            throw new ConvexError('TITLE_REQUIRED')
-        }
+        await ensureCanManageGames(ctx)
 
-        if (args.releaseYear === undefined) {
-            throw new ConvexError('RELEASE_YEAR_REQUIRED')
-        }
+        const titleNormalized = normalizeGameTitle(title)
+        assertTitleRequired(titleNormalized)
+        assertValidReleaseYear(releaseYear)
 
-        if (!isValidReleaseYear(args.releaseYear)) {
-            throw new ConvexError('RELEASE_YEAR_INVALID')
-        }
+        const existing = await findGameByTitleYear(ctx, titleNormalized, releaseYear)
+        assertUniqueGameTitleYear(existing)
 
-        const existing = await ctx.db
-            .query('games')
-            .withIndex('by_titleYear', (q) =>
-                q
-                    .eq('titleNormalized', titleNormalized)
-                    .eq('releaseYear', args.releaseYear!),
-            )
-            .unique()
-
-        if (existing) {
-            throw new ConvexError('GAME_TITLE_YEAR_ALREADY_EXISTS')
-        }
-
-        return await ctx.db.insert('games', {
-            title: args.title.trim(),
+        return await createGame(ctx, {
+            title: title.trim(),
             titleNormalized,
-            releaseYear: args.releaseYear,
-            coverImageUrl: args.coverImageUrl,
+            releaseYear,
+            coverImageUrl,
         })
     },
 })
@@ -65,46 +71,36 @@ export const update = mutation({
     args: {
         gameId: v.id('games'),
         title: v.string(),
-        releaseYear: v.optional(v.number()),
+        releaseYear: v.number(),
         coverImageUrl: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const game = await ctx.db.get(args.gameId)
-        if (!game) {
-            throw new ConvexError('GAME_NOT_FOUND')
-        }
+        const { coverImageUrl, gameId, releaseYear, title } = args
 
-        const titleNormalized = normalizeTitle(args.title)
-        if (titleNormalized.length === 0) {
-            throw new ConvexError('TITLE_REQUIRED')
-        }
+        await ensureCanManageGames(ctx)
 
-        if (args.releaseYear === undefined) {
-            throw new ConvexError('RELEASE_YEAR_REQUIRED')
-        }
+        requireGame(await getGameById(ctx, gameId))
 
-        if (!isValidReleaseYear(args.releaseYear)) {
-            throw new ConvexError('RELEASE_YEAR_INVALID')
-        }
+        const titleNormalized = normalizeGameTitle(title)
+        assertTitleRequired(titleNormalized)
+        assertValidReleaseYear(releaseYear)
 
-        const existing = await ctx.db
-            .query('games')
-            .withIndex('by_titleYear', (q) =>
-                q
-                    .eq('titleNormalized', titleNormalized)
-                    .eq('releaseYear', args.releaseYear!),
-            )
-            .unique()
+        const existing = await findGameByTitleYear(ctx, titleNormalized, releaseYear)
+        assertUniqueGameTitleYear(existing, gameId)
 
-        if (existing && existing._id !== args.gameId) {
-            throw new ConvexError('GAME_TITLE_YEAR_ALREADY_EXISTS')
-        }
+        const trimmedTitle = title.trim()
 
-        await ctx.db.patch(args.gameId, {
-            title: args.title.trim(),
+        await updateGame(ctx, gameId, {
+            title: trimmedTitle,
             titleNormalized,
-            releaseYear: args.releaseYear,
-            coverImageUrl: args.coverImageUrl,
+            releaseYear,
+            coverImageUrl,
+        })
+
+        await syncLibrarySnapshotsForGame(ctx, gameId, {
+            title: trimmedTitle,
+            releaseYear,
+            coverImageUrl,
         })
     },
 })
@@ -112,10 +108,10 @@ export const update = mutation({
 export const remove = mutation({
     args: { gameId: v.id('games') },
     handler: async (ctx, { gameId }) => {
-        const game = await ctx.db.get(gameId)
-        if (!game) {
-            throw new ConvexError('GAME_NOT_FOUND')
-        }
-        await ctx.db.delete(gameId)
+        await ensureCanManageGames(ctx)
+
+        requireGame(await getGameById(ctx, gameId))
+
+        await deleteGameWithLinkedLibraryEntries(ctx, gameId)
     },
 })

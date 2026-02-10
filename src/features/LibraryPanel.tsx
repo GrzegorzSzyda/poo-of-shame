@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useMemo, useState } from 'react'
 import { api } from '../../convex/_generated/api'
@@ -60,9 +60,23 @@ const toErrorMessage = (errorCode: string | null) => {
     return errorMessages[errorCode] ?? 'Wystąpił nieoczekiwany błąd.'
 }
 
-export const LibraryPanel = () => {
-    const games = useQuery(api.games.list)
-    const entries = useQuery(api.library.listMyLibrary)
+type Props = {
+    authReady: boolean
+}
+
+export const LibraryPanel = ({ authReady }: Props) => {
+    const { results: games } = usePaginatedQuery(
+        api.games.list,
+        authReady ? {} : 'skip',
+        { initialNumItems: 100 },
+    )
+    const {
+        results: entries,
+        status: entriesStatus,
+        loadMore: loadMoreEntries,
+    } = usePaginatedQuery(api.library.listMyLibrary, authReady ? {} : 'skip', {
+        initialNumItems: 50,
+    })
 
     const addToLibrary = useMutation(api.library.addToLibrary)
     const updateLibraryEntry = useMutation(api.library.updateLibraryEntry)
@@ -259,156 +273,174 @@ export const LibraryPanel = () => {
             {errorMessage ? <p className="mb-4 text-red-700">{errorMessage}</p> : null}
 
             <ul className="space-y-4">
-                {entries?.map((entry) => (
-                    <li key={entry._id} className="border p-3">
-                        <p>
-                            <strong>Gra:</strong>{' '}
-                            {entry.game
-                                ? `${entry.game.title} (${entry.game.releaseYear})`
-                                : (gamesById.get(entry.gameId) ?? 'Brak danych')}
-                        </p>
-                        <p>
-                            <strong>Platformy:</strong> {entry.platforms.join(', ')}
-                        </p>
-                        <p>
-                            <strong>Ocena:</strong> {entry.rating}
-                        </p>
-                        <p>
-                            <strong>Wants to play:</strong> {entry.wantsToPlay}
-                        </p>
-                        <p>
-                            <strong>Status:</strong> {entry.progressStatus}
-                        </p>
+                {entries?.map((entry) => {
+                    const isEditingEntry = editState?.entryId === entry._id
+                    const currentEditState = isEditingEntry ? editState : null
 
-                        <div className="mt-2 space-x-2">
-                            <button type="button" onClick={() => handleStartEdit(entry)}>
-                                Edytuj
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => void handleRemove(entry._id)}
-                            >
-                                Usuń
-                            </button>
-                        </div>
+                    return (
+                        <li key={entry._id} className="border p-3">
+                            <p>
+                                <strong>Gra:</strong>{' '}
+                                {entry.game
+                                    ? `${entry.game.title} (${entry.game.releaseYear})`
+                                    : (gamesById.get(entry.gameId) ?? 'Brak danych')}
+                            </p>
+                            <p>
+                                <strong>Platformy:</strong> {entry.platforms.join(', ')}
+                            </p>
+                            <p>
+                                <strong>Ocena:</strong> {entry.rating}
+                            </p>
+                            <p>
+                                <strong>Wants to play:</strong> {entry.wantsToPlay}
+                            </p>
+                            <p>
+                                <strong>Status:</strong> {entry.progressStatus}
+                            </p>
 
-                        {editState?.entryId === entry._id ? (
-                            <form
-                                onSubmit={handleUpdate}
-                                className="mt-3 space-y-2 border-t pt-3"
-                            >
-                                <div>
-                                    <p>Platformy:</p>
-                                    {PLATFORM_OPTIONS.map((platform) => (
-                                        <label
-                                            key={platform}
-                                            className="mr-3 inline-block"
-                                        >
+                            <div className="mt-2 space-x-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleStartEdit(entry)}
+                                >
+                                    Edytuj
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void handleRemove(entry._id)}
+                                >
+                                    Usuń
+                                </button>
+                            </div>
+
+                            {currentEditState ? (
+                                <form
+                                    onSubmit={handleUpdate}
+                                    className="mt-3 space-y-2 border-t pt-3"
+                                >
+                                    <div>
+                                        <p>Platformy:</p>
+                                        {PLATFORM_OPTIONS.map((platform) => (
+                                            <label
+                                                key={platform}
+                                                className="mr-3 inline-block"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={currentEditState.platforms.includes(
+                                                        platform,
+                                                    )}
+                                                    onChange={() =>
+                                                        toggleEditPlatform(platform)
+                                                    }
+                                                />{' '}
+                                                {platform}
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    <div>
+                                        <label>
+                                            Ocena:
                                             <input
-                                                type="checkbox"
-                                                checked={editState.platforms.includes(
-                                                    platform,
-                                                )}
-                                                onChange={() =>
-                                                    toggleEditPlatform(platform)
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                value={currentEditState.rating}
+                                                onChange={(event) =>
+                                                    setEditState((current) =>
+                                                        current
+                                                            ? {
+                                                                  ...current,
+                                                                  rating: Number(
+                                                                      event.target.value,
+                                                                  ),
+                                                              }
+                                                            : current,
+                                                    )
                                                 }
-                                            />{' '}
-                                            {platform}
+                                                className="ml-2"
+                                            />
                                         </label>
-                                    ))}
-                                </div>
+                                    </div>
 
-                                <div>
-                                    <label>
-                                        Ocena:
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={100}
-                                            value={editState.rating}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              rating: Number(
-                                                                  event.target.value,
-                                                              ),
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                            className="ml-2"
-                                        />
-                                    </label>
-                                </div>
+                                    <div>
+                                        <label>
+                                            Chcę zagrać (0-100):
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                max={100}
+                                                value={currentEditState.wantsToPlay}
+                                                onChange={(event) =>
+                                                    setEditState((current) =>
+                                                        current
+                                                            ? {
+                                                                  ...current,
+                                                                  wantsToPlay: Number(
+                                                                      event.target.value,
+                                                                  ),
+                                                              }
+                                                            : current,
+                                                    )
+                                                }
+                                                className="ml-2"
+                                            />
+                                        </label>
+                                    </div>
 
-                                <div>
-                                    <label>
-                                        Chcę zagrać (0-100):
-                                        <input
-                                            type="number"
-                                            min={0}
-                                            max={100}
-                                            value={editState.wantsToPlay}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              wantsToPlay: Number(
-                                                                  event.target.value,
-                                                              ),
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                            className="ml-2"
-                                        />
-                                    </label>
-                                </div>
+                                    <div>
+                                        <label>
+                                            Status:
+                                            <select
+                                                value={currentEditState.progressStatus}
+                                                onChange={(event) =>
+                                                    setEditState((current) =>
+                                                        current
+                                                            ? {
+                                                                  ...current,
+                                                                  progressStatus: event
+                                                                      .target
+                                                                      .value as ProgressStatus,
+                                                              }
+                                                            : current,
+                                                    )
+                                                }
+                                                className="ml-2"
+                                            >
+                                                {PROGRESS_STATUS_OPTIONS.map((status) => (
+                                                    <option key={status} value={status}>
+                                                        {status}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
 
-                                <div>
-                                    <label>
-                                        Status:
-                                        <select
-                                            value={editState.progressStatus}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              progressStatus: event.target
-                                                                  .value as ProgressStatus,
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                            className="ml-2"
+                                    <div className="space-x-2">
+                                        <button type="submit">Zapisz</button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setEditState(null)}
                                         >
-                                            {PROGRESS_STATUS_OPTIONS.map((status) => (
-                                                <option key={status} value={status}>
-                                                    {status}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-
-                                <div className="space-x-2">
-                                    <button type="submit">Zapisz</button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setEditState(null)}
-                                    >
-                                        Anuluj
-                                    </button>
-                                </div>
-                            </form>
-                        ) : null}
-                    </li>
-                ))}
+                                            Anuluj
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : null}
+                        </li>
+                    )
+                })}
             </ul>
+            {entriesStatus === 'CanLoadMore' ? (
+                <button
+                    type="button"
+                    className="mt-4"
+                    onClick={() => loadMoreEntries(50)}
+                >
+                    Załaduj więcej wpisów
+                </button>
+            ) : null}
         </section>
     )
 }

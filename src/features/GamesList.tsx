@@ -1,14 +1,29 @@
-import { useAuth } from '@clerk/clerk-react'
-import { useQuery } from 'convex/react'
+import { usePaginatedQuery } from 'convex/react'
+import { useMemo } from 'react'
 import { api } from '../../convex/_generated/api'
 import { Game } from './Game'
 
-export const GamesList = () => {
-    const { isSignedIn } = useAuth()
-    const games = useQuery(api.games.list)
-    const libraryEntries = useQuery(
+type Props = {
+    authReady: boolean
+    canManageGames: boolean | undefined
+}
+
+export const GamesList = ({ authReady, canManageGames }: Props) => {
+    const {
+        results: games,
+        status: gamesStatus,
+        loadMore: loadMoreGames,
+    } = usePaginatedQuery(api.games.list, authReady ? {} : 'skip', {
+        initialNumItems: 24,
+    })
+    const { results: libraryEntries } = usePaginatedQuery(
         api.library.listMyLibraryFiltered,
-        isSignedIn ? {} : 'skip',
+        authReady ? {} : 'skip',
+        { initialNumItems: 100 },
+    )
+    const libraryEntriesByGameId = useMemo(
+        () => new Map(libraryEntries.map((entry) => [entry.gameId, entry])),
+        [libraryEntries],
     )
 
     return (
@@ -18,12 +33,16 @@ export const GamesList = () => {
                     <Game
                         key={game._id}
                         game={game}
-                        libraryEntry={libraryEntries?.find(
-                            (entry) => entry.gameId === game._id,
-                        )}
+                        canManageGames={canManageGames}
+                        libraryEntry={libraryEntriesByGameId.get(game._id)}
                     />
                 ))}
             </ul>
+            {gamesStatus === 'CanLoadMore' ? (
+                <button type="button" onClick={() => loadMoreGames(24)}>
+                    Załaduj więcej gier
+                </button>
+            ) : null}
         </div>
     )
 }

@@ -8,6 +8,8 @@ export const gameFormErrorMessages = {
     RELEASE_YEAR_INVALID: 'Podany rok wydania jest niepoprawny.',
     GAME_TITLE_YEAR_ALREADY_EXISTS: 'Gra o tym tytule i roku już istnieje.',
     GAME_NOT_FOUND: 'Nie znaleziono gry.',
+    FORBIDDEN: 'Brak uprawnień do zarządzania grami.',
+    UNAUTHORIZED: 'Musisz być zalogowany.',
 } as const
 
 type ErrorCode = keyof typeof gameFormErrorMessages | 'UNKNOWN_ERROR'
@@ -48,7 +50,7 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
 
         try {
             if (releaseYear === '') {
-                // pozwól backendowi zwrócić RELEASE_YEAR_REQUIRED (albo możesz tu early return)
+                // Backend zwróci RELEASE_YEAR_INVALID dla NaN.
                 await onSubmit({ title, releaseYear: NaN })
                 return
             }

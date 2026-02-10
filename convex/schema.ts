@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
+import { platformValidator, progressStatusValidator } from './domain/library'
 
 export default defineSchema({
     games: defineTable({
@@ -11,33 +12,19 @@ export default defineSchema({
     libraryEntries: defineTable({
         userId: v.string(),
         gameId: v.id('games'),
-        platforms: v.array(
-            v.union(
-                v.literal('ps_disc'),
-                v.literal('ps_store'),
-                v.literal('ps_plus'),
-                v.literal('steam'),
-                v.literal('epic'),
-                v.literal('gog'),
-                v.literal('amazon_gaming'),
-                v.literal('ubisoft_connect'),
-                v.literal('xbox'),
-                v.literal('switch'),
-                v.literal('other'),
-            ),
-        ),
+        gameTitle: v.optional(v.string()),
+        gameReleaseYear: v.optional(v.number()),
+        gameCoverImageUrl: v.optional(v.string()),
+        platforms: v.array(platformValidator),
         rating: v.number(),
         wantsToPlay: v.number(),
-        progressStatus: v.union(
-            v.literal('backlog'),
-            v.literal('playing'),
-            v.literal('completed'),
-            v.literal('done'),
-            v.literal('dropped'),
-        ),
+        progressStatus: progressStatusValidator,
         createdAt: v.number(),
         updatedAt: v.number(),
     })
         .index('by_user', ['userId'])
-        .index('by_user_game', ['userId', 'gameId']),
+        .index('by_user_game', ['userId', 'gameId'])
+        .index('by_game', ['gameId'])
+        .index('by_user_progress', ['userId', 'progressStatus'])
+        .index('by_user_wantsToPlay', ['userId', 'wantsToPlay']),
 })

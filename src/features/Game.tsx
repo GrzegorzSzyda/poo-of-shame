@@ -4,7 +4,7 @@ import { ConvexError } from 'convex/values'
 import { useEffect, useState } from 'react'
 import { Button } from '~/components/Button'
 import { api } from '../../convex/_generated/api'
-import { type Doc } from '../../convex/_generated/dataModel'
+import { type Doc, type Id } from '../../convex/_generated/dataModel'
 import { EditGameForm } from './EditGameForm'
 
 const PROGRESS_STATUS_OPTIONS = [
@@ -15,17 +15,40 @@ const PROGRESS_STATUS_OPTIONS = [
     'dropped',
 ] as const
 type ProgressStatus = (typeof PROGRESS_STATUS_OPTIONS)[number]
+type Platform =
+    | 'ps_disc'
+    | 'ps_store'
+    | 'ps_plus'
+    | 'steam'
+    | 'epic'
+    | 'gog'
+    | 'amazon_gaming'
+    | 'ubisoft_connect'
+    | 'xbox'
+    | 'switch'
+    | 'other'
 
-type LibraryEntry = Doc<'libraryEntries'> & {
-    game: Doc<'games'> | null
+type LibraryEntry = {
+    _id: Id<'libraryEntries'>
+    gameId: Id<'games'>
+    platforms: ReadonlyArray<Platform>
+    rating: number
+    wantsToPlay: number
+    progressStatus: ProgressStatus
+    game: {
+        title: string
+        releaseYear: number
+        coverImageUrl?: string
+    } | null
 }
 
 type Props = {
+    canManageGames: boolean | undefined
     game: Doc<'games'>
     libraryEntry?: LibraryEntry
 }
 
-export const Game = ({ game, libraryEntry }: Props) => {
+export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
     const removeGame = useMutation(api.games.remove)
     const addToLibrary = useMutation(api.library.addToLibrary)
     const updateLibraryEntry = useMutation(api.library.updateLibraryEntry)
@@ -81,7 +104,7 @@ export const Game = ({ game, libraryEntry }: Props) => {
         try {
             await updateLibraryEntry({
                 entryId: libraryEntry._id,
-                platforms: libraryEntry.platforms,
+                platforms: [...libraryEntry.platforms],
                 rating: libraryRating,
                 wantsToPlay: libraryWantsToPlay,
                 progressStatus: libraryStatus,
@@ -124,7 +147,7 @@ export const Game = ({ game, libraryEntry }: Props) => {
 
     return (
         <li className="border-text flex items-center gap-2 border-b-2 p-5">
-            {isEditing ? (
+            {isEditing && canManageGames ? (
                 <EditGameForm game={game} onDone={() => setIsEditing(false)} />
             ) : (
                 <div className="flex w-full gap-4">
@@ -141,9 +164,11 @@ export const Game = ({ game, libraryEntry }: Props) => {
                         <div className="font-semibold">{game.title}</div>
                         <div className="text-sm opacity-70">{game.releaseYear}</div>
                     </div>
-                    <Button type="button" onClick={() => setIsEditing(true)}>
-                        Edytuj
-                    </Button>
+                    {canManageGames ? (
+                        <Button type="button" onClick={() => setIsEditing(true)}>
+                            Edytuj
+                        </Button>
+                    ) : null}
                     <SignedIn>
                         {!libraryEntry ? (
                             <Button
@@ -226,16 +251,18 @@ export const Game = ({ game, libraryEntry }: Props) => {
                             </div>
                         )}
                     </SignedIn>
-                    <Button
-                        type="button"
-                        onClick={() => {
-                            const shouldDelete = window.confirm('Usunąć tę grę?')
-                            if (!shouldDelete) return
-                            void removeGame({ gameId: game._id })
-                        }}
-                    >
-                        Usuń
-                    </Button>
+                    {canManageGames ? (
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                const shouldDelete = window.confirm('Usunąć tę grę?')
+                                if (!shouldDelete) return
+                                void removeGame({ gameId: game._id })
+                            }}
+                        >
+                            Usuń
+                        </Button>
+                    ) : null}
                     {libraryError ? (
                         <div className="text-red-800">{libraryError}</div>
                     ) : null}

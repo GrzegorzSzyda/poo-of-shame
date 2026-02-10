@@ -24,9 +24,15 @@ export const gameFormErrorMessages: Record<string, string> = {
     RELEASE_YEAR_INVALID: 'Podany rok wydania jest niepoprawny.',
     GAME_TITLE_YEAR_ALREADY_EXISTS: 'Gra o tym tytule i roku już istnieje.',
     GAME_NOT_FOUND: 'Nie znaleziono gry.',
+    FORBIDDEN: 'Brak uprawnień do zarządzania grami.',
+    UNAUTHORIZED: 'Musisz być zalogowany.',
 }
 
-export const AddGameForm = () => {
+type Props = {
+    canManageGames: boolean | undefined
+}
+
+export const AddGameForm = ({ canManageGames }: Props) => {
     const createGame = useMutation(api.games.create)
 
     const [title, setTitle] = useState('')
@@ -46,7 +52,7 @@ export const AddGameForm = () => {
         try {
             await createGame({
                 title,
-                releaseYear: releaseYear === '' ? undefined : releaseYear,
+                releaseYear: releaseYear === '' ? Number.NaN : releaseYear,
                 coverImageUrl: coverImageUrl.length > 0 ? coverImageUrl : undefined,
             })
 
@@ -68,6 +74,10 @@ export const AddGameForm = () => {
         setReleaseYear(toReleaseYear(igdbGame.first_release_date))
         setCoverImageUrl(toCoverUrl(igdbGame.cover?.image_id))
         setErrorCode(null)
+    }
+
+    if (!canManageGames) {
+        return null
     }
 
     return (

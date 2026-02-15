@@ -130,7 +130,7 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
                                     <Button
                                         type="button"
                                         size="sm"
-                                        variant="secondary"
+                                        variant="ghost"
                                         tone="danger"
                                         title="Anuluj usuwanie"
                                         onClick={() => setIsDeleteConfirming(false)}

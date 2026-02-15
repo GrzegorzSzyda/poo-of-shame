@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router'
 import { ErrorView } from './layout/ErrorView'
 import { ProtectedPage } from './layout/ProtectedPage'
+import { CheatsPage } from './pages/CheatsPage'
 import { GamesPage } from './pages/GamesPage'
 import { HomePage } from './pages/HomePage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -47,7 +48,22 @@ const libraryRoute = createRoute({
     ),
 })
 
-const routeTree = rootRoute.addChildren([homeRoute, gamesRoute, libraryRoute])
+const cheatsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/cheats',
+    component: () => (
+        <ProtectedPage>
+            <CheatsPage />
+        </ProtectedPage>
+    ),
+})
+
+const routeTree = rootRoute.addChildren([
+    homeRoute,
+    gamesRoute,
+    libraryRoute,
+    cheatsRoute,
+])
 
 export const router = createRouter({ routeTree })
 

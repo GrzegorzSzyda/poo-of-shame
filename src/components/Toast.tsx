@@ -138,7 +138,7 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
                                     title="Zamknij komunikat"
                                     onClick={() => removeToast(toast.id)}
                                 >
-                                    <XIcon className="h-3.5 w-3.5" />
+                                    <XIcon className="h-3.5 w-3.5" weight="bold" />
                                 </Button>
                             </div>
                         </div>

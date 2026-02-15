@@ -142,7 +142,7 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
                 </div>
 
                 <FormActions align="center">
-                    <Button type="submit" startIcon={PlusIcon}>
+                    <Button type="submit" startIcon={PlusIcon} startIconWeight="bold">
                         Dodaj grę
                     </Button>
                 </FormActions>

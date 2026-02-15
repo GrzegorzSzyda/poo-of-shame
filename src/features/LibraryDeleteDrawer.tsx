@@ -64,7 +64,7 @@ export const LibraryDeleteDrawer = ({ isOpen, onClose, entry }: Props) => {
                 </Button>
                 <Button
                     type="button"
-                    variant="secondary"
+                    variant="ghost"
                     title="Anuluj usuwanie wpisu"
                     onClick={onClose}
                 >

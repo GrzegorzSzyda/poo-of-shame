@@ -20,6 +20,7 @@ export const GamesPage = () => {
                     <Button
                         type="button"
                         startIcon={PlusIcon}
+                        startIconWeight="bold"
                         onClick={() => setIsAddDrawerOpen(true)}
                     >
                         Dodaj grę
@@ -32,6 +33,7 @@ export const GamesPage = () => {
                 onClose={() => setIsAddDrawerOpen(false)}
                 title="Dodaj grę"
                 titleStartIcon={PlusIcon}
+                titleStartIconWeight="bold"
             >
                 <AddGameForm
                     canManageGames={canManageGames}

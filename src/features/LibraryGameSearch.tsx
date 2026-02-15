@@ -226,6 +226,7 @@ export const LibraryGameSearch = ({
                                         type="button"
                                         variant="ghost"
                                         startIcon={isInLibrary ? undefined : PlusIcon}
+                                        startIconWeight="bold"
                                         title={
                                             isInLibrary
                                                 ? 'Gra już jest w kupce'

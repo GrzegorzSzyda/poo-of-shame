@@ -95,7 +95,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
     }
 
     return (
-        <li className="border-text/20 bg-bg/30 rounded-lg border p-4">
+        <li className="hover:bg-text/6 rounded-lg p-4 transition-colors duration-200">
             <div className="flex items-start gap-4">
                 {game.coverImageUrl ? (
                     <img
@@ -122,6 +122,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                                 type="button"
                                 variant="ghost"
                                 startIcon={PlusIcon}
+                                startIconWeight="bold"
                                 title="Dodaj do kupki"
                                 onClick={() => void handleAddToLibrary()}
                             >
@@ -193,7 +194,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                     </Button>
                     <Button
                         type="button"
-                        variant="secondary"
+                        variant="ghost"
                         title="Anuluj usuwanie gry"
                         onClick={() => setIsDeleteConfirmOpen(false)}
                     >

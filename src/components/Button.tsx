@@ -30,13 +30,13 @@ const buttonStyles = cva({
             variant: 'secondary',
             tone: 'brand',
             className:
-                'border-teal-300/70 bg-teal-400/10 text-teal-200 hover:border-teal-200 hover:bg-teal-300/20 hover:text-teal-100 focus-visible:ring-teal-300/70 focus-visible:ring-offset-bg',
+                'border-teal-300/70 bg-transparent text-teal-200 hover:border-teal-200 hover:bg-text/10 hover:text-teal-100 focus-visible:ring-teal-300/70 focus-visible:ring-offset-bg',
         },
         {
             variant: 'ghost',
             tone: 'brand',
             className:
-                'text-teal-400 hover:bg-teal-300/15 hover:text-teal-300 focus-visible:ring-teal-300/60 focus-visible:ring-offset-bg',
+                'text-teal-400 hover:bg-text/6 hover:text-teal-300 focus-visible:ring-teal-300/60 focus-visible:ring-offset-bg',
         },
         {
             variant: 'primary',
@@ -48,13 +48,13 @@ const buttonStyles = cva({
             variant: 'secondary',
             tone: 'danger',
             className:
-                'border-red-300/45 bg-red-500/10 text-red-200 hover:border-red-200 hover:bg-red-500/20 hover:text-red-100 focus-visible:ring-red-400/60 focus-visible:ring-offset-bg',
+                'border-red-300/45 bg-transparent text-red-200 hover:border-red-200 hover:bg-text/10 hover:text-red-100 focus-visible:ring-red-400/60 focus-visible:ring-offset-bg',
         },
         {
             variant: 'ghost',
             tone: 'danger',
             className:
-                'text-red-500 hover:bg-red-500/15 hover:text-red-400 focus-visible:ring-red-400/60 focus-visible:ring-offset-bg',
+                'text-red-500 hover:bg-text/6 hover:text-red-400 focus-visible:ring-red-400/60 focus-visible:ring-offset-bg',
         },
     ],
     defaultVariants: {
@@ -65,12 +65,15 @@ const buttonStyles = cva({
 })
 
 type ButtonVariants = VariantProps<typeof buttonStyles>
-type IconComponent = ComponentType<{ className?: string }>
+type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
+type IconComponent = ComponentType<{ className?: string; weight?: IconWeight }>
 
 type ButtonProps = ButtonVariants &
     Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
         startIcon?: IconComponent
+        startIconWeight?: IconWeight
         endIcon?: IconComponent
+        endIconWeight?: IconWeight
         children: ReactNode
     }
 
@@ -79,14 +82,16 @@ export const Button = ({
     tone,
     size,
     startIcon: StartIcon,
+    startIconWeight,
     endIcon: EndIcon,
+    endIconWeight,
     children,
     className,
     ...props
 }: ButtonProps) => (
     <button className={cx(buttonStyles({ variant, tone, size, className }))} {...props}>
-        {StartIcon ? <StartIcon className="h-5 w-5" /> : null}
+        {StartIcon ? <StartIcon className="h-5 w-5" weight={startIconWeight} /> : null}
         {children}
-        {EndIcon ? <EndIcon className="h-5 w-5" /> : null}
+        {EndIcon ? <EndIcon className="h-5 w-5" weight={endIconWeight} /> : null}
     </button>
 )

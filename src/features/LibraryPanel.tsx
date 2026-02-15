@@ -173,7 +173,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                             return (
                                 <li
                                     key={entry._id}
-                                    className="border-text/20 bg-bg/30 rounded-lg border p-4"
+                                    className="hover:bg-text/6 rounded-lg p-4 transition-colors duration-200"
                                 >
                                     <div className="flex items-start gap-4">
                                         {entry.game?.coverImageUrl ? (
@@ -268,7 +268,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                 <Button
                     type="button"
                     className="mt-1"
-                    variant="secondary"
+                    variant="ghost"
                     onClick={() => loadMoreEntries(50)}
                 >
                     Załaduj więcej wpisów

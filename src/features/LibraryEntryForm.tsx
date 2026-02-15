@@ -106,7 +106,7 @@ export const LibraryEntryForm = ({
                     {submitLabel}
                 </Button>
                 {onCancel ? (
-                    <Button type="button" variant="secondary" onClick={onCancel}>
+                    <Button type="button" variant="ghost" onClick={onCancel}>
                         Anuluj
                     </Button>
                 ) : null}

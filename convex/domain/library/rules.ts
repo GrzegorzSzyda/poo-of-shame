@@ -4,11 +4,7 @@ import { ERRORS } from '../../common/errors'
 import type { Platform } from './types'
 
 export const normalizeLibraryPlatforms = (platforms: Platform[]) => {
-    const unique = [...new Set(platforms)]
-    if (unique.length === 0) {
-        throw new ConvexError(ERRORS.PLATFORM_REQUIRED)
-    }
-    return unique
+    return [...new Set(platforms)]
 }
 
 export const assertValidRating = (rating: number) => {

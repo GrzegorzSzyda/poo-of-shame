@@ -1,69 +1,26 @@
-import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
-import { ConvexError } from 'convex/values'
+import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
+import { usePaginatedQuery, useQuery } from 'convex/react'
 import { useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
-import { Form } from '~/components/Form'
-import { FormActions } from '~/components/FormActions'
-import { FormLabel } from '~/components/FormLabel'
-import { Input } from '~/components/Input'
-import { Select } from '~/components/Select'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
+import { LibraryAddDrawer } from './LibraryAddDrawer'
+import { LibraryDeleteDrawer } from './LibraryDeleteDrawer'
+import { LibraryEditDrawer } from './LibraryEditDrawer'
+import { type Platform, type ProgressStatus } from './libraryShared'
 
-const PLATFORM_OPTIONS = [
-    'ps_disc',
-    'ps_store',
-    'ps_plus',
-    'steam',
-    'epic',
-    'gog',
-    'amazon_gaming',
-    'ubisoft_connect',
-    'xbox',
-    'switch',
-    'other',
-] as const
-
-type Platform = (typeof PLATFORM_OPTIONS)[number]
-
-const PROGRESS_STATUS_OPTIONS = [
-    'backlog',
-    'playing',
-    'completed',
-    'done',
-    'dropped',
-] as const
-type ProgressStatus = (typeof PROGRESS_STATUS_OPTIONS)[number]
-
-const errorMessages: Record<string, string> = {
-    UNAUTHORIZED: 'Musisz być zalogowany.',
-    GAME_NOT_FOUND: 'Nie znaleziono gry.',
-    LIB_ENTRY_ALREADY_EXISTS: 'Ta gra jest już w Twojej bibliotece.',
-    LIB_ENTRY_NOT_FOUND: 'Wpis nie istnieje.',
-    FORBIDDEN: 'Brak dostępu do tego wpisu.',
-    RATING_INVALID: 'Ocena musi być liczbą całkowitą 0-100.',
-    WANTS_TO_PLAY_INVALID: 'Wants to play musi być liczbą całkowitą 0-100.',
-    PLATFORM_REQUIRED: 'Wybierz przynajmniej jedną platformę.',
-}
-
-type EditState = {
-    entryId: Id<'libraryEntries'>
-    platforms: Platform[]
+type LibraryEntry = {
+    _id: Id<'libraryEntries'>
+    gameId: Id<'games'>
+    platforms: ReadonlyArray<Platform>
     rating: number
     wantsToPlay: number
     progressStatus: ProgressStatus
-}
-
-const parseErrorCode = (error: unknown) => {
-    if (error instanceof ConvexError) {
-        return String(error.data)
-    }
-    return 'UNKNOWN_ERROR'
-}
-
-const toErrorMessage = (errorCode: string | null) => {
-    if (!errorCode) return null
-    return errorMessages[errorCode] ?? 'Wystąpił nieoczekiwany błąd.'
+    game: {
+        title: string
+        releaseYear: number
+        coverImageUrl?: string
+    } | null
 }
 
 type Props = {
@@ -80,17 +37,13 @@ export const LibraryPanel = ({ authReady }: Props) => {
         initialNumItems: 50,
     })
 
-    const addToLibrary = useMutation(api.library.addToLibrary)
-    const updateLibraryEntry = useMutation(api.library.updateLibraryEntry)
-    const removeFromLibrary = useMutation(api.library.removeFromLibrary)
-
-    const [gameId, setGameId] = useState<string>('')
-    const [platforms, setPlatforms] = useState<Platform[]>([])
-    const [rating, setRating] = useState<number>(50)
-    const [wantsToPlay, setWantsToPlay] = useState<number>(50)
-    const [progressStatus, setProgressStatus] = useState<ProgressStatus>('backlog')
-    const [errorCode, setErrorCode] = useState<string | null>(null)
-    const [editState, setEditState] = useState<EditState | null>(null)
+    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
+    const [editingEntryId, setEditingEntryId] = useState<Id<'libraryEntries'> | null>(
+        null,
+    )
+    const [deletingEntryId, setDeletingEntryId] = useState<Id<'libraryEntries'> | null>(
+        null,
+    )
 
     const gamesById = useMemo(() => {
         const map = new Map<string, string>()
@@ -100,353 +53,147 @@ export const LibraryPanel = ({ authReady }: Props) => {
         return map
     }, [games])
 
-    const toggleAddPlatform = (platform: Platform) => {
-        setPlatforms((current) =>
-            current.includes(platform)
-                ? current.filter((value) => value !== platform)
-                : [...current, platform],
-        )
-    }
+    const entryById = useMemo(
+        () => new Map(entries.map((entry) => [entry._id, entry])),
+        [entries],
+    )
 
-    const toggleEditPlatform = (platform: Platform) => {
-        setEditState((current) => {
-            if (!current) return current
-            const nextPlatforms = current.platforms.includes(platform)
-                ? current.platforms.filter((value) => value !== platform)
-                : [...current.platforms, platform]
-            return { ...current, platforms: nextPlatforms }
-        })
-    }
-
-    const handleAdd = async (event: React.FormEvent) => {
-        event.preventDefault()
-        setErrorCode(null)
-
-        if (!gameId) {
-            setErrorCode('GAME_NOT_FOUND')
-            return
-        }
-
-        try {
-            await addToLibrary({
-                gameId: gameId as Id<'games'>,
-                platforms,
-                rating,
-                wantsToPlay,
-                progressStatus,
-            })
-            setGameId('')
-            setPlatforms([])
-            setRating(50)
-            setWantsToPlay(50)
-            setProgressStatus('backlog')
-        } catch (error) {
-            setErrorCode(parseErrorCode(error))
-        }
-    }
-
-    const handleStartEdit = (entry: NonNullable<typeof entries>[number]) => {
-        setErrorCode(null)
-        setEditState({
-            entryId: entry._id,
-            platforms: [...entry.platforms],
-            rating: entry.rating,
-            wantsToPlay: entry.wantsToPlay,
-            progressStatus: entry.progressStatus,
-        })
-    }
-
-    const handleUpdate = async (event: React.FormEvent) => {
-        event.preventDefault()
-        if (!editState) return
-        setErrorCode(null)
-
-        try {
-            await updateLibraryEntry(editState)
-            setEditState(null)
-        } catch (error) {
-            setErrorCode(parseErrorCode(error))
-        }
-    }
-
-    const handleRemove = async (entryId: Id<'libraryEntries'>) => {
-        setErrorCode(null)
-        try {
-            await removeFromLibrary({ entryId })
-            if (editState?.entryId === entryId) {
-                setEditState(null)
-            }
-        } catch (error) {
-            setErrorCode(parseErrorCode(error))
-        }
-    }
-
-    const errorMessage = toErrorMessage(errorCode)
+    const editingEntry =
+        editingEntryId !== null
+            ? ((entryById.get(editingEntryId) as LibraryEntry | undefined) ?? null)
+            : null
+    const deletingEntry =
+        deletingEntryId !== null
+            ? ((entryById.get(deletingEntryId) as LibraryEntry | undefined) ?? null)
+            : null
 
     return (
-        <section className="mt-8 border-2 p-4">
-            <h2 className="mb-3 text-2xl font-bold">Moja biblioteka</h2>
+        <section className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-text text-2xl">Moja biblioteka</h2>
+                <Button
+                    type="button"
+                    startIcon={PlusIcon}
+                    title="Dodaj wpis do biblioteki"
+                    onClick={() => setIsAddDrawerOpen(true)}
+                >
+                    Dodaj do biblioteki
+                </Button>
+            </div>
 
-            <Form onSubmit={handleAdd} className="mb-6">
-                <div>
-                    <FormLabel htmlFor="library-game">Gra</FormLabel>
-                    <Select
-                        id="library-game"
-                        value={gameId}
-                        onChange={(event) => setGameId(event.target.value)}
-                    >
-                        <option value="">Wybierz grę</option>
-                        {games?.map((game) => (
-                            <option key={game._id} value={game._id}>
-                                {game.title} ({game.releaseYear})
-                            </option>
-                        ))}
-                    </Select>
+            {!entries ? (
+                <div className="text-text/70">Ładowanie biblioteki...</div>
+            ) : null}
+
+            {entries.length === 0 ? (
+                <div className="border-text/20 bg-bg/30 rounded-lg border p-6">
+                    <p className="text-text/80">Twoja biblioteka jest pusta.</p>
                 </div>
+            ) : (
+                <>
+                    <div className="text-text/75 text-sm">
+                        Liczba wpisów: {entries.length}
+                    </div>
+                    <ul className="space-y-3">
+                        {entries.map((entry) => {
+                            const entryTitle = entry.game
+                                ? entry.game.title
+                                : (gamesById.get(entry.gameId) ?? 'Brak danych')
+                            const entryYear = entry.game?.releaseYear
 
-                <div>
-                    <FormLabel>Platformy</FormLabel>
-                    {PLATFORM_OPTIONS.map((platform) => (
-                        <label
-                            key={platform}
-                            className="mr-3 inline-flex items-center gap-2 text-sm"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={platforms.includes(platform)}
-                                onChange={() => toggleAddPlatform(platform)}
-                            />
-                            {platform}
-                        </label>
-                    ))}
-                </div>
-
-                <div>
-                    <FormLabel htmlFor="library-rating">Ocena (0-100)</FormLabel>
-                    <Input
-                        id="library-rating"
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={rating}
-                        onChange={(event) => setRating(Number(event.target.value))}
-                    />
-                </div>
-
-                <div>
-                    <FormLabel htmlFor="library-wants-to-play">
-                        Chcę zagrać (0-100)
-                    </FormLabel>
-                    <Input
-                        id="library-wants-to-play"
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={wantsToPlay}
-                        onChange={(event) => setWantsToPlay(Number(event.target.value))}
-                    />
-                </div>
-
-                <div>
-                    <FormLabel htmlFor="library-status">Status</FormLabel>
-                    <Select
-                        id="library-status"
-                        value={progressStatus}
-                        onChange={(event) =>
-                            setProgressStatus(event.target.value as ProgressStatus)
-                        }
-                    >
-                        {PROGRESS_STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                                {status}
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-
-                <FormActions align="start">
-                    <Button type="submit">Dodaj do biblioteki</Button>
-                </FormActions>
-            </Form>
-
-            {errorMessage ? <p className="mb-4 text-red-700">{errorMessage}</p> : null}
-
-            <ul className="space-y-4">
-                {entries?.map((entry) => {
-                    const isEditingEntry = editState?.entryId === entry._id
-                    const currentEditState = isEditingEntry ? editState : null
-
-                    return (
-                        <li key={entry._id} className="border p-3">
-                            <p>
-                                <strong>Gra:</strong>{' '}
-                                {entry.game
-                                    ? `${entry.game.title} (${entry.game.releaseYear})`
-                                    : (gamesById.get(entry.gameId) ?? 'Brak danych')}
-                            </p>
-                            <p>
-                                <strong>Platformy:</strong> {entry.platforms.join(', ')}
-                            </p>
-                            <p>
-                                <strong>Ocena:</strong> {entry.rating}
-                            </p>
-                            <p>
-                                <strong>Wants to play:</strong> {entry.wantsToPlay}
-                            </p>
-                            <p>
-                                <strong>Status:</strong> {entry.progressStatus}
-                            </p>
-
-                            <div className="mt-2 space-x-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleStartEdit(entry)}
+                            return (
+                                <li
+                                    key={entry._id}
+                                    className="border-text/20 bg-bg/30 rounded-lg border p-4"
                                 >
-                                    Edytuj
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => void handleRemove(entry._id)}
-                                >
-                                    Usuń
-                                </button>
-                            </div>
+                                    <div className="flex items-start gap-4">
+                                        {entry.game?.coverImageUrl ? (
+                                            <img
+                                                src={entry.game.coverImageUrl}
+                                                alt={`Okładka: ${entryTitle}`}
+                                                className="h-24 w-16 shrink-0 rounded object-cover"
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="bg-bg text-text/60 border-text/20 flex h-24 w-16 shrink-0 items-center justify-center rounded border text-xs">
+                                                brak
+                                            </div>
+                                        )}
 
-                            {currentEditState ? (
-                                <Form
-                                    onSubmit={handleUpdate}
-                                    className="mt-3 border-t pt-3"
-                                >
-                                    <div>
-                                        <FormLabel>Platformy</FormLabel>
-                                        {PLATFORM_OPTIONS.map((platform) => (
-                                            <label
-                                                key={platform}
-                                                className="mr-3 inline-flex items-center gap-2 text-sm"
+                                        <div className="min-w-0 flex-1">
+                                            <div className="text-text truncate">
+                                                {entryTitle}
+                                            </div>
+                                            <div className="text-text/70 text-sm">
+                                                {entryYear ?? 'brak roku'}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                startIcon={PencilSimpleIcon}
+                                                title="Edytuj wpis biblioteki"
+                                                onClick={() =>
+                                                    setEditingEntryId(entry._id)
+                                                }
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={currentEditState.platforms.includes(
-                                                        platform,
-                                                    )}
-                                                    onChange={() =>
-                                                        toggleEditPlatform(platform)
-                                                    }
-                                                />
-                                                {platform}
-                                            </label>
-                                        ))}
+                                                <span className="sr-only">Edytuj</span>
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                startIcon={TrashIcon}
+                                                title="Usuń wpis biblioteki"
+                                                onClick={() =>
+                                                    setDeletingEntryId(entry._id)
+                                                }
+                                            >
+                                                <span className="sr-only">Usuń</span>
+                                            </Button>
+                                        </div>
                                     </div>
 
-                                    <div>
-                                        <FormLabel
-                                            htmlFor={`library-edit-rating-${entry._id}`}
-                                        >
-                                            Ocena
-                                        </FormLabel>
-                                        <Input
-                                            id={`library-edit-rating-${entry._id}`}
-                                            type="number"
-                                            min={0}
-                                            max={100}
-                                            value={currentEditState.rating}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              rating: Number(
-                                                                  event.target.value,
-                                                              ),
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                        />
+                                    <div className="text-text/80 mt-3 grid gap-1 text-sm sm:grid-cols-2">
+                                        <div>Status: {entry.progressStatus}</div>
+                                        <div>Platformy: {entry.platforms.join(', ')}</div>
+                                        <div>Ocena: {entry.rating}</div>
+                                        <div>Wants to play: {entry.wantsToPlay}</div>
                                     </div>
+                                </li>
+                            )
+                        })}
+                    </ul>
+                </>
+            )}
 
-                                    <div>
-                                        <FormLabel
-                                            htmlFor={`library-edit-wants-${entry._id}`}
-                                        >
-                                            Chcę zagrać (0-100)
-                                        </FormLabel>
-                                        <Input
-                                            id={`library-edit-wants-${entry._id}`}
-                                            type="number"
-                                            min={0}
-                                            max={100}
-                                            value={currentEditState.wantsToPlay}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              wantsToPlay: Number(
-                                                                  event.target.value,
-                                                              ),
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <FormLabel
-                                            htmlFor={`library-edit-status-${entry._id}`}
-                                        >
-                                            Status
-                                        </FormLabel>
-                                        <Select
-                                            id={`library-edit-status-${entry._id}`}
-                                            value={currentEditState.progressStatus}
-                                            onChange={(event) =>
-                                                setEditState((current) =>
-                                                    current
-                                                        ? {
-                                                              ...current,
-                                                              progressStatus: event.target
-                                                                  .value as ProgressStatus,
-                                                          }
-                                                        : current,
-                                                )
-                                            }
-                                        >
-                                            {PROGRESS_STATUS_OPTIONS.map((status) => (
-                                                <option key={status} value={status}>
-                                                    {status}
-                                                </option>
-                                            ))}
-                                        </Select>
-                                    </div>
-
-                                    <FormActions align="start">
-                                        <Button type="submit">Zapisz</Button>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={() => setEditState(null)}
-                                        >
-                                            Anuluj
-                                        </Button>
-                                    </FormActions>
-                                </Form>
-                            ) : null}
-                        </li>
-                    )
-                })}
-            </ul>
             {entriesStatus === 'CanLoadMore' ? (
                 <Button
                     type="button"
-                    className="mt-4"
+                    className="mt-1"
                     variant="secondary"
                     onClick={() => loadMoreEntries(50)}
                 >
                     Załaduj więcej wpisów
                 </Button>
             ) : null}
+
+            <LibraryAddDrawer
+                isOpen={isAddDrawerOpen}
+                onClose={() => setIsAddDrawerOpen(false)}
+                games={games}
+            />
+            <LibraryEditDrawer
+                isOpen={editingEntry !== null}
+                onClose={() => setEditingEntryId(null)}
+                entry={editingEntry}
+            />
+            <LibraryDeleteDrawer
+                isOpen={deletingEntry !== null}
+                onClose={() => setDeletingEntryId(null)}
+                entry={deletingEntry}
+            />
         </section>
     )
 }

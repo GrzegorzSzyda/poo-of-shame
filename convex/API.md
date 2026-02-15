@@ -324,7 +324,7 @@ const { results: filteredLibrary, status, loadMore } = usePaginatedQuery(
 Args:
 
 - `gameId: Id<'games'>`
-- `platforms: Platform[]` (co najmniej 1 po deduplikacji)
+- `platforms: Platform[]`
 - `rating: number` (`0..100`, int)
 - `wantsToPlay: number` (`0..100`, int)
 - `progressStatus: ProgressStatus`
@@ -338,7 +338,6 @@ Błędy:
 - `GAME_NOT_FOUND`
 - `RATING_INVALID`
 - `WANTS_TO_PLAY_INVALID`
-- `PLATFORM_REQUIRED`
 - `LIB_ENTRY_ALREADY_EXISTS`
 
 Uwagi:
@@ -386,7 +385,6 @@ Błędy:
 - `FORBIDDEN`
 - `RATING_INVALID`
 - `WANTS_TO_PLAY_INVALID`
-- `PLATFORM_REQUIRED`
 
 Przykład:
 

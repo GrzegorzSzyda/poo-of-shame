@@ -5,7 +5,15 @@ type InputProps = InputHTMLAttributes<HTMLInputElement> & {
     invalid?: boolean
 }
 
-export const Input = ({ className, invalid = false, ...props }: InputProps) => (
+export const Input = ({
+    className,
+    invalid = false,
+    autoComplete = 'off',
+    autoCorrect = 'off',
+    autoCapitalize = 'off',
+    spellCheck = false,
+    ...props
+}: InputProps) => (
     <input
         className={cx(
             'placeholder:text-text/45 h-11 w-full rounded-md border bg-black/20 px-3 text-base text-teal-100 transition-colors outline-none',
@@ -14,6 +22,10 @@ export const Input = ({ className, invalid = false, ...props }: InputProps) => (
                 : 'border-teal-300/40 focus:border-teal-400',
             className,
         )}
+        autoComplete={autoComplete}
+        autoCorrect={autoCorrect}
+        autoCapitalize={autoCapitalize}
+        spellCheck={spellCheck}
         {...props}
     />
 )

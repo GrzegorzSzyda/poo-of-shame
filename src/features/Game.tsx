@@ -6,11 +6,16 @@ import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
+import { useToast } from '~/components/Toast'
 import { api } from '../../convex/_generated/api'
 import { type Doc, type Id } from '../../convex/_generated/dataModel'
 import { EditGameForm } from './EditGameForm'
 import { LibraryEditDrawer } from './LibraryEditDrawer'
-import { type Platform, type ProgressStatus } from './libraryShared'
+import {
+    type Platform,
+    type ProgressStatus,
+    toLibraryErrorMessage,
+} from './libraryShared'
 
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
@@ -35,16 +40,13 @@ type Props = {
 export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
     const removeGame = useMutation(api.games.remove)
     const addToLibrary = useMutation(api.library.addToLibrary)
+    const { success, error: showError } = useToast()
 
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
     const [isLibraryEditOpen, setIsLibraryEditOpen] = useState(false)
-    const [libraryInfo, setLibraryInfo] = useState<string | null>(null)
-    const [libraryError, setLibraryError] = useState<string | null>(null)
 
     const handleAddToLibrary = async () => {
-        setLibraryInfo(null)
-        setLibraryError(null)
         try {
             await addToLibrary({
                 gameId: game._id,
@@ -53,26 +55,43 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                 wantsToPlay: 50,
                 progressStatus: 'backlog',
             })
-            setLibraryInfo('Dodano do kupki.')
+            success('Dodano do kupki.')
         } catch (error) {
             if (error instanceof ConvexError) {
-                const code = String(error.data)
-                if (code === 'LIB_ENTRY_ALREADY_EXISTS') {
-                    setLibraryError('Gra jest już w Twojej kupce.')
-                    return
-                }
-                if (code === 'UNAUTHORIZED') {
-                    setLibraryError('Musisz być zalogowany.')
-                    return
-                }
+                const errorCode = String(error.data)
+                showError(
+                    toLibraryErrorMessage(errorCode) ??
+                        'Nie udało się dodać gry do kupki.',
+                )
+                return
             }
-            setLibraryError('Nie udało się dodać gry do kupki.')
+            showError('Nie udało się dodać gry do kupki.')
         }
     }
 
     const handleRemoveGame = async () => {
-        await removeGame({ gameId: game._id })
-        setIsDeleteConfirmOpen(false)
+        try {
+            await removeGame({ gameId: game._id })
+            setIsDeleteConfirmOpen(false)
+            success('Usunięto grę.')
+        } catch (error) {
+            if (error instanceof ConvexError) {
+                const code = String(error.data)
+                if (code === 'FORBIDDEN') {
+                    showError('Brak uprawnień do usuwania gier.')
+                    return
+                }
+                if (code === 'UNAUTHORIZED') {
+                    showError('Musisz być zalogowany.')
+                    return
+                }
+                if (code === 'GAME_NOT_FOUND') {
+                    showError('Nie znaleziono gry.')
+                    return
+                }
+            }
+            showError('Nie udało się usunąć gry.')
+        }
     }
 
     return (
@@ -145,12 +164,6 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                     ) : null}
                 </div>
             </div>
-            {libraryError ? (
-                <div className="mt-3 text-red-800">{libraryError}</div>
-            ) : null}
-            {libraryInfo ? (
-                <div className="mt-3 text-green-700">{libraryInfo}</div>
-            ) : null}
             <Drawer
                 isOpen={isEditing && Boolean(canManageGames)}
                 onClose={() => setIsEditing(false)}

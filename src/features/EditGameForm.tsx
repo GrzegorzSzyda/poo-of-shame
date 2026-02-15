@@ -1,4 +1,5 @@
 import { useMutation } from 'convex/react'
+import { useToast } from '~/components/Toast'
 import { api } from '../../convex/_generated/api'
 import { type Doc } from '../../convex/_generated/dataModel'
 import { GameForm } from './GameForm'
@@ -10,6 +11,7 @@ type Props = {
 
 export const EditGameForm = ({ game, onDone }: Props) => {
     const updateGame = useMutation(api.games.update)
+    const { success } = useToast()
 
     return (
         <GameForm
@@ -26,6 +28,7 @@ export const EditGameForm = ({ game, onDone }: Props) => {
                     releaseYear: values.releaseYear,
                     coverImageUrl: values.coverImageUrl,
                 })
+                success('Zapisano zmiany gry.')
                 onDone?.()
             }}
         />

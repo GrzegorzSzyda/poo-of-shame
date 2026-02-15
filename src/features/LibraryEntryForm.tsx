@@ -19,7 +19,6 @@ type Props = {
     submitLabel: string
     onSubmit: (values: LibraryEntryDraft) => Promise<void>
     onCancel?: () => void
-    errorMessage?: string | null
 }
 
 export const LibraryEntryForm = ({
@@ -27,7 +26,6 @@ export const LibraryEntryForm = ({
     submitLabel,
     onSubmit,
     onCancel,
-    errorMessage,
 }: Props) => {
     const [values, setValues] = useState<LibraryEntryDraft>(initialValues)
 
@@ -113,7 +111,6 @@ export const LibraryEntryForm = ({
                     </Button>
                 ) : null}
             </FormActions>
-            {errorMessage ? <div className="text-red-700">{errorMessage}</div> : null}
         </Form>
     )
 }

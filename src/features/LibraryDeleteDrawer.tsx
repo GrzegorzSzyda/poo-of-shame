@@ -1,9 +1,9 @@
 import { TrashIcon } from '@phosphor-icons/react'
 import { useMutation } from 'convex/react'
-import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
+import { useToast } from '~/components/Toast'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { parseLibraryErrorCode, toLibraryErrorMessage } from './libraryShared'
@@ -25,17 +25,18 @@ type Props = {
 
 export const LibraryDeleteDrawer = ({ isOpen, onClose, entry }: Props) => {
     const removeFromLibrary = useMutation(api.library.removeFromLibrary)
-    const [errorCode, setErrorCode] = useState<string | null>(null)
+    const { success, error: showError } = useToast()
 
     const handleDelete = async () => {
         if (!entry) return
-        setErrorCode(null)
 
         try {
             await removeFromLibrary({ entryId: entry._id })
+            success('Usunięto wpis z kupki.')
             onClose()
         } catch (error) {
-            setErrorCode(parseLibraryErrorCode(error))
+            const code = parseLibraryErrorCode(error)
+            showError(toLibraryErrorMessage(code) ?? 'Wystąpił nieoczekiwany błąd.')
         }
     }
 
@@ -70,9 +71,6 @@ export const LibraryDeleteDrawer = ({ isOpen, onClose, entry }: Props) => {
                     Anuluj
                 </Button>
             </FormActions>
-            {errorCode ? (
-                <p className="text-red-700">{toLibraryErrorMessage(errorCode)}</p>
-            ) : null}
         </Drawer>
     )
 }

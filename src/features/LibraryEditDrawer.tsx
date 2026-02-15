@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
+import { useToast } from '~/components/Toast'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { LibraryEntryForm } from './LibraryEntryForm'
@@ -37,7 +38,7 @@ type Props = {
 export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
     const updateLibraryEntry = useMutation(api.library.updateLibraryEntry)
     const removeFromLibrary = useMutation(api.library.removeFromLibrary)
-    const [errorCode, setErrorCode] = useState<string | null>(null)
+    const { success, error: showError } = useToast()
     const [isDeleteConfirming, setIsDeleteConfirming] = useState(false)
 
     const handleClose = () => {
@@ -58,7 +59,6 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
         progressStatus: ProgressStatus
     }) => {
         if (!entry) return
-        setErrorCode(null)
 
         try {
             await updateLibraryEntry({
@@ -69,22 +69,25 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
                 progressStatus,
             })
             setIsDeleteConfirming(false)
+            success('Zapisano wpis na kupce.')
             onClose()
         } catch (error) {
-            setErrorCode(parseLibraryErrorCode(error))
+            const code = parseLibraryErrorCode(error)
+            showError(toLibraryErrorMessage(code) ?? 'Wystąpił nieoczekiwany błąd.')
         }
     }
 
     const handleDelete = async () => {
         if (!entry) return
-        setErrorCode(null)
 
         try {
             await removeFromLibrary({ entryId: entry._id })
             setIsDeleteConfirming(false)
+            success('Usunięto wpis z kupki.')
             handleClose()
         } catch (error) {
-            setErrorCode(parseLibraryErrorCode(error))
+            const code = parseLibraryErrorCode(error)
+            showError(toLibraryErrorMessage(code) ?? 'Wystąpił nieoczekiwany błąd.')
         }
     }
 
@@ -108,7 +111,6 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
                         submitLabel="Zapisz zmiany"
                         onSubmit={handleSubmit}
                         onCancel={handleClose}
-                        errorMessage={toLibraryErrorMessage(errorCode)}
                     />
                     <div className="mt-auto pt-4">
                         <FormActions align="center">

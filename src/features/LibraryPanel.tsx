@@ -12,6 +12,7 @@ import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
 import { H1 } from '~/components/H1'
+import { useToast } from '~/components/Toast'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { LibraryEditDrawer } from './LibraryEditDrawer'
@@ -68,6 +69,7 @@ const statusIcon = (status: ProgressStatus) => {
 }
 
 export const LibraryPanel = ({ authReady }: Props) => {
+    const { success, error: showError } = useToast()
     const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
     const addToLibrary = useMutation(api.library.addToLibrary)
     const {
@@ -79,7 +81,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
     })
 
     const [addingGameId, setAddingGameId] = useState<string | null>(null)
-    const [actionErrorCode, setActionErrorCode] = useState<string | null>(null)
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
     const [editingEntry, setEditingEntry] = useState<LibraryEntry | null>(null)
 
@@ -97,7 +98,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
     )
 
     const handleAddFromSearch = async (game: GameSearchItem) => {
-        setActionErrorCode(null)
         setAddingGameId(game._id)
 
         try {
@@ -123,8 +123,10 @@ export const LibraryPanel = ({ authReady }: Props) => {
                 },
             })
             setIsEditDrawerOpen(true)
+            success('Dodano do kupki.')
         } catch (error) {
-            setActionErrorCode(parseLibraryErrorCode(error))
+            const errorCode = parseLibraryErrorCode(error)
+            showError(toLibraryErrorMessage(errorCode) ?? 'Wystąpił nieoczekiwany błąd.')
         } finally {
             setAddingGameId(null)
         }
@@ -142,10 +144,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
                     onAdd={(game) => void handleAddFromSearch(game)}
                 />
             </div>
-
-            {actionErrorCode ? (
-                <p className="text-red-700">{toLibraryErrorMessage(actionErrorCode)}</p>
-            ) : null}
 
             {!entries ? <div className="text-text/70">Ładowanie kupki...</div> : null}
 

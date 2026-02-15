@@ -7,6 +7,7 @@ import { Form } from '~/components/Form'
 import { FormActions } from '~/components/FormActions'
 import { FormLabel } from '~/components/FormLabel'
 import { Input } from '~/components/Input'
+import { useToast } from '~/components/Toast'
 
 export const gameFormErrorMessages = {
     TITLE_REQUIRED: 'Podaj tytuł gry.',
@@ -37,22 +38,15 @@ type Props = {
 }
 
 export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
+    const { error: showError } = useToast()
     const [title, setTitle] = useState(initialValues?.title ?? '')
     const [releaseYear, setReleaseYear] = useState<number | ''>(
         initialValues?.releaseYear ?? '',
     )
     const [coverImageUrl, setCoverImageUrl] = useState(initialValues?.coverImageUrl ?? '')
-    const [errorCode, setErrorCode] = useState<ErrorCode | null>(null)
-
-    const errorMessage =
-        errorCode !== null
-            ? (gameFormErrorMessages[errorCode as keyof typeof gameFormErrorMessages] ??
-              'Wystąpił nieoczekiwany błąd.')
-            : null
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault()
-        setErrorCode(null)
 
         try {
             if (releaseYear === '') {
@@ -68,10 +62,17 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
             })
         } catch (error) {
             if (error instanceof ConvexError) {
-                setErrorCode(String(error.data) as ErrorCode)
+                const code = String(error.data) as ErrorCode
+                showError(
+                    code in gameFormErrorMessages
+                        ? gameFormErrorMessages[
+                              code as keyof typeof gameFormErrorMessages
+                          ]
+                        : 'Wystąpił nieoczekiwany błąd.',
+                )
                 return
             }
-            setErrorCode('UNKNOWN_ERROR')
+            showError('Wystąpił nieoczekiwany błąd.')
         }
     }
 
@@ -130,7 +131,6 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
                     {submitLabel}
                 </Button>
             </FormActions>
-            {errorMessage && <div className="text-red-800">{errorMessage}</div>}
         </Form>
     )
 }

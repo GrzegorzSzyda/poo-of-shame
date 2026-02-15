@@ -9,6 +9,7 @@ import { Form } from '~/components/Form'
 import { FormActions } from '~/components/FormActions'
 import { FormLabel } from '~/components/FormLabel'
 import { Input } from '~/components/Input'
+import { useToast } from '~/components/Toast'
 import { Waiter } from '~/components/Waiter'
 import { api } from '../../convex/_generated/api'
 import { IgdbGamePicker } from './IgdbGamePicker'
@@ -41,20 +42,14 @@ type Props = {
 
 export const AddGameForm = ({ canManageGames, onDone }: Props) => {
     const createGame = useMutation(api.games.create)
+    const { success, error: showError } = useToast()
 
     const [title, setTitle] = useState('')
     const [releaseYear, setReleaseYear] = useState<number | ''>('')
     const [coverImageUrl, setCoverImageUrl] = useState('')
-    const [errorCode, setErrorCode] = useState<string | null>(null)
-
-    const errorMessage =
-        errorCode !== null
-            ? (gameFormErrorMessages[errorCode] ?? 'Wystąpił nieoczekiwany błąd.')
-            : null
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault()
-        setErrorCode(null)
 
         try {
             await createGame({
@@ -66,14 +61,16 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
             setTitle('')
             setReleaseYear('')
             setCoverImageUrl('')
+            success('Gra została dodana.')
             onDone?.()
         } catch (error) {
             if (error instanceof ConvexError) {
-                setErrorCode(String(error.data))
+                const code = String(error.data)
+                showError(gameFormErrorMessages[code] ?? 'Wystąpił nieoczekiwany błąd.')
                 return
             }
 
-            setErrorCode('UNKNOWN_ERROR')
+            showError('Wystąpił nieoczekiwany błąd.')
         }
     }
 
@@ -81,7 +78,6 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
         setTitle(igdbGame.name)
         setReleaseYear(toReleaseYear(igdbGame.first_release_date))
         setCoverImageUrl(toCoverUrl(igdbGame.cover?.image_id))
-        setErrorCode(null)
     }
 
     if (!canManageGames) {
@@ -150,8 +146,6 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
                         Dodaj grę
                     </Button>
                 </FormActions>
-
-                {errorMessage && <div className="text-red-800">{errorMessage}</div>}
             </Form>
         </div>
     )

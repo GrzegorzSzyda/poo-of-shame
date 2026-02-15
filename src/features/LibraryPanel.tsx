@@ -1,17 +1,29 @@
-import { ListBulletsIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react'
+import {
+    CheckCircleIcon,
+    GameControllerIcon,
+    ListBulletsIcon,
+    PencilSimpleIcon,
+    StarIcon,
+    TriangleIcon,
+    TrophyIcon,
+    XCircleIcon,
+} from '@phosphor-icons/react'
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
 import { H1 } from '~/components/H1'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { LibraryDeleteDrawer } from './LibraryDeleteDrawer'
 import { LibraryEditDrawer } from './LibraryEditDrawer'
 import { LibraryGameSearch } from './LibraryGameSearch'
+import { PlatformPillList } from './PlatformPills'
 import {
     type Platform,
     type ProgressStatus,
     parseLibraryErrorCode,
+    progressStatusLabel,
+    progressStatusTextTone,
+    progressStatusUsesWantsToPlay,
     toLibraryErrorMessage,
 } from './libraryShared'
 
@@ -36,11 +48,23 @@ type GameSearchItem = {
     coverImageUrl?: string
 }
 
-const shouldShowWantsToPlay = (status: ProgressStatus) =>
-    status === 'backlog' || status === 'playing'
-
 type Props = {
     authReady: boolean
+}
+
+const statusIcon = (status: ProgressStatus) => {
+    switch (status) {
+        case 'backlog':
+            return TriangleIcon
+        case 'playing':
+            return GameControllerIcon
+        case 'completed':
+            return CheckCircleIcon
+        case 'done':
+            return TrophyIcon
+        case 'dropped':
+            return XCircleIcon
+    }
 }
 
 export const LibraryPanel = ({ authReady }: Props) => {
@@ -58,9 +82,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
     const [actionErrorCode, setActionErrorCode] = useState<string | null>(null)
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
     const [editingEntry, setEditingEntry] = useState<LibraryEntry | null>(null)
-    const [deletingEntryId, setDeletingEntryId] = useState<Id<'libraryEntries'> | null>(
-        null,
-    )
 
     const gamesById = useMemo(() => {
         const map = new Map<string, string>()
@@ -70,20 +91,10 @@ export const LibraryPanel = ({ authReady }: Props) => {
         return map
     }, [games])
 
-    const entryById = useMemo(
-        () => new Map(entries.map((entry) => [entry._id, entry])),
-        [entries],
-    )
-
     const libraryGameIds = useMemo(
         () => new Set(entries.map((entry) => String(entry.gameId))),
         [entries],
     )
-
-    const deletingEntry =
-        deletingEntryId !== null
-            ? ((entryById.get(deletingEntryId) as LibraryEntry | undefined) ?? null)
-            : null
 
     const handleAddFromSearch = async (game: GameSearchItem) => {
         setActionErrorCode(null)
@@ -136,13 +147,11 @@ export const LibraryPanel = ({ authReady }: Props) => {
                 <p className="text-red-700">{toLibraryErrorMessage(actionErrorCode)}</p>
             ) : null}
 
-            {!entries ? (
-                <div className="text-text/70">Ładowanie biblioteki...</div>
-            ) : null}
+            {!entries ? <div className="text-text/70">Ładowanie kupki...</div> : null}
 
             {entries.length === 0 ? (
                 <div className="border-text/20 bg-bg/30 rounded-lg border p-6">
-                    <p className="text-text/80">Twoja biblioteka jest pusta.</p>
+                    <p className="text-text/80">Twoja kupka jest pusta.</p>
                 </div>
             ) : (
                 <>
@@ -155,6 +164,13 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                 ? entry.game.title
                                 : (gamesById.get(entry.gameId) ?? 'Brak danych')
                             const entryYear = entry.game?.releaseYear
+                            const ratingOnTen = (
+                                Math.round((entry.rating / 10) * 10) / 10
+                            ).toFixed(entry.rating % 10 === 0 ? 0 : 1)
+                            const wantsOnTen = (
+                                Math.round((entry.wantsToPlay / 10) * 10) / 10
+                            ).toFixed(entry.wantsToPlay % 10 === 0 ? 0 : 1)
+                            const StatusIcon = statusIcon(entry.progressStatus)
 
                             return (
                                 <li
@@ -176,11 +192,55 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                         )}
 
                                         <div className="min-w-0 flex-1">
-                                            <div className="text-text truncate">
-                                                {entryTitle}
+                                            <div className="text-text -mt-2 flex flex-wrap items-center gap-y-1">
+                                                <span className="inline-flex items-baseline gap-1 truncate">
+                                                    <span className="truncate">
+                                                        {entryTitle}
+                                                    </span>
+                                                    <span className="text-text/70 text-sm">
+                                                        ({entryYear ?? 'brak roku'})
+                                                    </span>
+                                                </span>
+                                                <span
+                                                    className={`ml-5 inline-flex items-center gap-1 text-xs tracking-wide uppercase ${progressStatusTextTone(entry.progressStatus)}`}
+                                                >
+                                                    <StatusIcon className="h-3.5 w-3.5" />
+                                                    {progressStatusLabel(
+                                                        entry.progressStatus,
+                                                    )}
+                                                </span>
                                             </div>
-                                            <div className="text-text/70 text-sm">
-                                                {entryYear ?? 'brak roku'}
+                                            <div className="mt-3">
+                                                <PlatformPillList
+                                                    platforms={entry.platforms}
+                                                />
+                                            </div>
+                                            <div className="text-text/80 mt-3 flex flex-wrap items-center gap-3 text-sm">
+                                                {progressStatusUsesWantsToPlay(
+                                                    entry.progressStatus,
+                                                ) ? (
+                                                    <span
+                                                        className="text-text/85 inline-flex items-center gap-1.5"
+                                                        title={`Zainteresowanie: ${wantsOnTen}/10`}
+                                                    >
+                                                        <GameControllerIcon
+                                                            className="h-4.5 w-4.5 text-teal-300"
+                                                            weight="fill"
+                                                        />
+                                                        {wantsOnTen}/10
+                                                    </span>
+                                                ) : (
+                                                    <span
+                                                        className="text-text/85 inline-flex items-center gap-1.5"
+                                                        title={`Ocena: ${ratingOnTen}/10`}
+                                                    >
+                                                        <StarIcon
+                                                            className="h-4.5 w-4.5 text-amber-300"
+                                                            weight="fill"
+                                                        />
+                                                        {ratingOnTen}/10
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
 
@@ -189,7 +249,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                                 type="button"
                                                 variant="ghost"
                                                 startIcon={PencilSimpleIcon}
-                                                title="Edytuj wpis biblioteki"
+                                                title="Edytuj"
                                                 onClick={() => {
                                                     setEditingEntry(entry as LibraryEntry)
                                                     setIsEditDrawerOpen(true)
@@ -197,30 +257,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                             >
                                                 <span className="sr-only">Edytuj</span>
                                             </Button>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                startIcon={TrashIcon}
-                                                title="Usuń wpis biblioteki"
-                                                onClick={() =>
-                                                    setDeletingEntryId(entry._id)
-                                                }
-                                            >
-                                                <span className="sr-only">Usuń</span>
-                                            </Button>
                                         </div>
-                                    </div>
-
-                                    <div className="text-text/80 mt-3 grid gap-1 text-sm sm:grid-cols-2">
-                                        <div>Status: {entry.progressStatus}</div>
-                                        <div>Platformy: {entry.platforms.join(', ')}</div>
-                                        {shouldShowWantsToPlay(entry.progressStatus) ? (
-                                            <div>
-                                                Zainteresowanie: {entry.wantsToPlay}
-                                            </div>
-                                        ) : (
-                                            <div>Ocena: {entry.rating}</div>
-                                        )}
                                     </div>
                                 </li>
                             )
@@ -247,11 +284,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
                     setIsEditDrawerOpen(false)
                 }}
                 entry={editingEntry}
-            />
-            <LibraryDeleteDrawer
-                isOpen={deletingEntry !== null}
-                onClose={() => setDeletingEntryId(null)}
-                entry={deletingEntry}
             />
         </section>
     )

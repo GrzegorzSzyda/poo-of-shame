@@ -1,4 +1,4 @@
-import { TrashIcon, XIcon } from '@phosphor-icons/react'
+import { TrashIcon } from '@phosphor-icons/react'
 import { useMutation } from 'convex/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
@@ -47,7 +47,7 @@ export const LibraryDeleteDrawer = ({ isOpen, onClose, entry }: Props) => {
             titleStartIcon={TrashIcon}
         >
             <p className="text-text/80 text-base">
-                Czy na pewno chcesz usunąć ten wpis z biblioteki?
+                Czy na pewno chcesz usunąć ten wpis z kupki?
             </p>
             {entry?.game?.title ? (
                 <p className="text-text mt-2 text-sm">{entry.game.title}</p>
@@ -64,7 +64,6 @@ export const LibraryDeleteDrawer = ({ isOpen, onClose, entry }: Props) => {
                 <Button
                     type="button"
                     variant="secondary"
-                    startIcon={XIcon}
                     title="Anuluj usuwanie wpisu"
                     onClick={onClose}
                 >

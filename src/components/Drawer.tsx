@@ -59,7 +59,7 @@ export const Drawer = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className="border-text/20 absolute top-0 right-0 h-full w-full max-w-2xl overflow-y-auto border-l bg-[linear-gradient(135deg,#1a1026_0%,#0f0619_100%)] p-6 shadow-[-24px_0_48px_rgba(0,0,0,0.4)]"
+                className="border-text/20 absolute top-0 right-0 flex h-full w-full max-w-2xl flex-col border-l bg-[linear-gradient(135deg,#1a1026_0%,#0f0619_100%)] p-6 shadow-[-24px_0_48px_rgba(0,0,0,0.4)]"
             >
                 <div className="mb-6 flex items-center justify-between gap-4">
                     <H1 startIcon={titleStartIcon}>{title}</H1>
@@ -74,7 +74,7 @@ export const Drawer = ({
                     </button>
                 </div>
 
-                {children}
+                <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
             </aside>
         </div>
     )

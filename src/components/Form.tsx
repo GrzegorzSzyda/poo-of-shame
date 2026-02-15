@@ -6,7 +6,7 @@ type FormProps = FormHTMLAttributes<HTMLFormElement> & {
 }
 
 export const Form = ({ children, className, ...props }: FormProps) => (
-    <form className={cx('space-y-5', className)} {...props}>
+    <form className={cx('space-y-6', className)} {...props}>
         {children}
     </form>
 )

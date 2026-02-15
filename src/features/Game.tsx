@@ -1,44 +1,16 @@
 import { SignedIn } from '@clerk/clerk-react'
-import {
-    FloppyDiskIcon,
-    PencilSimpleIcon,
-    PlusIcon,
-    TrashIcon,
-    XCircleIcon,
-} from '@phosphor-icons/react'
+import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
 import { useMutation } from 'convex/react'
 import { ConvexError } from 'convex/values'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
-import { FormLabel } from '~/components/FormLabel'
-import { Input } from '~/components/Input'
-import { Select } from '~/components/Select'
 import { api } from '../../convex/_generated/api'
 import { type Doc, type Id } from '../../convex/_generated/dataModel'
 import { EditGameForm } from './EditGameForm'
-
-const PROGRESS_STATUS_OPTIONS = [
-    'backlog',
-    'playing',
-    'completed',
-    'done',
-    'dropped',
-] as const
-type ProgressStatus = (typeof PROGRESS_STATUS_OPTIONS)[number]
-type Platform =
-    | 'ps_disc'
-    | 'ps_store'
-    | 'ps_plus'
-    | 'steam'
-    | 'epic'
-    | 'gog'
-    | 'amazon_gaming'
-    | 'ubisoft_connect'
-    | 'xbox'
-    | 'switch'
-    | 'other'
+import { LibraryEditDrawer } from './LibraryEditDrawer'
+import { type Platform, type ProgressStatus } from './libraryShared'
 
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
@@ -63,23 +35,12 @@ type Props = {
 export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
     const removeGame = useMutation(api.games.remove)
     const addToLibrary = useMutation(api.library.addToLibrary)
-    const updateLibraryEntry = useMutation(api.library.updateLibraryEntry)
-    const removeFromLibrary = useMutation(api.library.removeFromLibrary)
 
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
-    const [libraryStatus, setLibraryStatus] = useState<ProgressStatus>('backlog')
-    const [libraryRating, setLibraryRating] = useState(50)
-    const [libraryWantsToPlay, setLibraryWantsToPlay] = useState(50)
+    const [isLibraryEditOpen, setIsLibraryEditOpen] = useState(false)
     const [libraryInfo, setLibraryInfo] = useState<string | null>(null)
     const [libraryError, setLibraryError] = useState<string | null>(null)
-
-    useEffect(() => {
-        if (!libraryEntry) return
-        setLibraryStatus(libraryEntry.progressStatus)
-        setLibraryRating(libraryEntry.rating)
-        setLibraryWantsToPlay(libraryEntry.wantsToPlay)
-    }, [libraryEntry])
 
     const handleAddToLibrary = async () => {
         setLibraryInfo(null)
@@ -92,12 +53,12 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                 wantsToPlay: 50,
                 progressStatus: 'backlog',
             })
-            setLibraryInfo('Dodano do biblioteki.')
+            setLibraryInfo('Dodano do kupki.')
         } catch (error) {
             if (error instanceof ConvexError) {
                 const code = String(error.data)
                 if (code === 'LIB_ENTRY_ALREADY_EXISTS') {
-                    setLibraryError('Gra jest już w Twojej bibliotece.')
+                    setLibraryError('Gra jest już w Twojej kupce.')
                     return
                 }
                 if (code === 'UNAUTHORIZED') {
@@ -105,56 +66,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                     return
                 }
             }
-            setLibraryError('Nie udało się dodać gry do biblioteki.')
-        }
-    }
-
-    const handleSaveLibrary = async () => {
-        if (!libraryEntry) return
-        setLibraryInfo(null)
-        setLibraryError(null)
-
-        try {
-            await updateLibraryEntry({
-                entryId: libraryEntry._id,
-                platforms: [...libraryEntry.platforms],
-                rating: libraryRating,
-                wantsToPlay: libraryWantsToPlay,
-                progressStatus: libraryStatus,
-            })
-            setLibraryInfo('Zapisano zmiany.')
-        } catch (error) {
-            if (error instanceof ConvexError) {
-                const code = String(error.data)
-                if (code === 'RATING_INVALID' || code === 'WANTS_TO_PLAY_INVALID') {
-                    setLibraryError('Ocena i wantsToPlay muszą być liczbami 0-100.')
-                    return
-                }
-            }
-            setLibraryError('Nie udało się zapisać zmian.')
-        }
-    }
-
-    const handleRemoveFromLibrary = async () => {
-        if (!libraryEntry) return
-        setLibraryInfo(null)
-        setLibraryError(null)
-        try {
-            await removeFromLibrary({ entryId: libraryEntry._id })
-            setLibraryInfo('Usunięto z biblioteki.')
-        } catch (error) {
-            if (error instanceof ConvexError) {
-                const code = String(error.data)
-                if (code === 'LIB_ENTRY_NOT_FOUND') {
-                    setLibraryError('Wpis biblioteki nie istnieje.')
-                    return
-                }
-                if (code === 'FORBIDDEN') {
-                    setLibraryError('Brak dostępu do wpisu biblioteki.')
-                    return
-                }
-            }
-            setLibraryError('Nie udało się usunąć z biblioteki.')
+            setLibraryError('Nie udało się dodać gry do kupki.')
         }
     }
 
@@ -180,7 +92,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                 )}
 
                 <div className="min-w-0 flex-1">
-                    <div className="text-text truncate">{game.title}</div>
+                    <div className="text-text -mt-2 truncate">{game.title}</div>
                     <div className="text-text/70 text-sm">{game.releaseYear}</div>
                 </div>
 
@@ -196,7 +108,18 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                             >
                                 Dodaj do kupki
                             </Button>
-                        ) : null}
+                        ) : (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    title="Edytuj"
+                                    onClick={() => setIsLibraryEditOpen(true)}
+                                >
+                                    Na kupce
+                                </Button>
+                            </>
+                        )}
                     </SignedIn>
                     {canManageGames ? (
                         <Button
@@ -222,81 +145,6 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                     ) : null}
                 </div>
             </div>
-            <SignedIn>
-                {libraryEntry ? (
-                    <div className="border-text/20 mt-4 rounded-md border p-3">
-                        <div className="mb-3 text-sm">W bibliotece</div>
-                        <div className="mb-3">
-                            <FormLabel htmlFor={`library-status-${game._id}`}>
-                                Status
-                            </FormLabel>
-                            <Select
-                                id={`library-status-${game._id}`}
-                                value={libraryStatus}
-                                onChange={(event) =>
-                                    setLibraryStatus(event.target.value as ProgressStatus)
-                                }
-                            >
-                                {PROGRESS_STATUS_OPTIONS.map((status) => (
-                                    <option key={status} value={status}>
-                                        {status}
-                                    </option>
-                                ))}
-                            </Select>
-                        </div>
-                        <div className="mb-3">
-                            <FormLabel htmlFor={`library-rating-${game._id}`}>
-                                Ocena
-                            </FormLabel>
-                            <Input
-                                id={`library-rating-${game._id}`}
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={libraryRating}
-                                onChange={(event) =>
-                                    setLibraryRating(Number(event.target.value))
-                                }
-                            />
-                        </div>
-                        <div className="mb-3">
-                            <FormLabel htmlFor={`library-wants-${game._id}`}>
-                                Wants to play
-                            </FormLabel>
-                            <Input
-                                id={`library-wants-${game._id}`}
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={libraryWantsToPlay}
-                                onChange={(event) =>
-                                    setLibraryWantsToPlay(Number(event.target.value))
-                                }
-                            />
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                startIcon={FloppyDiskIcon}
-                                title="Zapisz zmiany w bibliotece"
-                                onClick={() => void handleSaveLibrary()}
-                            >
-                                Zapisz
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                startIcon={XCircleIcon}
-                                title="Usuń grę z biblioteki"
-                                onClick={() => void handleRemoveFromLibrary()}
-                            >
-                                Usuń z biblioteki
-                            </Button>
-                        </div>
-                    </div>
-                ) : null}
-            </SignedIn>
             {libraryError ? (
                 <div className="mt-3 text-red-800">{libraryError}</div>
             ) : null}
@@ -340,6 +188,13 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                     </Button>
                 </FormActions>
             </Drawer>
+            <SignedIn>
+                <LibraryEditDrawer
+                    isOpen={isLibraryEditOpen}
+                    onClose={() => setIsLibraryEditOpen(false)}
+                    entry={libraryEntry ?? null}
+                />
+            </SignedIn>
         </li>
     )
 }

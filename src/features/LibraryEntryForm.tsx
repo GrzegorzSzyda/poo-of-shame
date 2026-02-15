@@ -1,21 +1,18 @@
-import { FloppyDiskIcon, XIcon } from '@phosphor-icons/react'
+import { FloppyDiskIcon } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Button } from '~/components/Button'
 import { Form } from '~/components/Form'
 import { FormActions } from '~/components/FormActions'
 import { FormLabel } from '~/components/FormLabel'
-import { Input } from '~/components/Input'
-import { Select } from '~/components/Select'
+import { InterestPads } from '~/components/InterestPads'
+import { RatingStars } from '~/components/RatingStars'
+import { PlatformPillSelector } from './PlatformPills'
+import { ProgressStatusPills } from './StatusPills'
 import {
     type LibraryEntryDraft,
-    PLATFORM_OPTIONS,
-    PROGRESS_STATUS_OPTIONS,
     type Platform,
-    type ProgressStatus,
+    progressStatusUsesWantsToPlay,
 } from './libraryShared'
-
-const shouldShowWantsToPlay = (status: ProgressStatus) =>
-    status === 'backlog' || status === 'playing'
 
 type Props = {
     initialValues: LibraryEntryDraft
@@ -56,75 +53,50 @@ export const LibraryEntryForm = ({
         <Form onSubmit={handleSubmit}>
             <div>
                 <FormLabel>Platformy</FormLabel>
-                <div className="flex flex-wrap gap-3">
-                    {PLATFORM_OPTIONS.map((platform) => (
-                        <label
-                            key={platform}
-                            className="inline-flex items-center gap-2 text-sm"
-                        >
-                            <input
-                                type="checkbox"
-                                checked={values.platforms.includes(platform)}
-                                onChange={() => togglePlatform(platform)}
-                            />
-                            {platform}
-                        </label>
-                    ))}
-                </div>
+                <PlatformPillSelector
+                    selected={values.platforms}
+                    onToggle={togglePlatform}
+                />
             </div>
 
             <div>
                 <FormLabel htmlFor="library-edit-status">Status</FormLabel>
-                <Select
+                <ProgressStatusPills
                     id="library-edit-status"
                     value={values.progressStatus}
-                    onChange={(event) =>
+                    onChange={(status) =>
                         setValues((current) => ({
                             ...current,
-                            progressStatus: event.target.value as ProgressStatus,
+                            progressStatus: status,
                         }))
                     }
-                >
-                    {PROGRESS_STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                            {status}
-                        </option>
-                    ))}
-                </Select>
+                />
             </div>
 
-            {shouldShowWantsToPlay(values.progressStatus) ? (
+            {progressStatusUsesWantsToPlay(values.progressStatus) ? (
                 <div>
-                    <FormLabel htmlFor="library-edit-wants">
-                        Zainteresowanie (0-100)
-                    </FormLabel>
-                    <Input
+                    <FormLabel htmlFor="library-edit-wants">Zainteresowanie</FormLabel>
+                    <InterestPads
                         id="library-edit-wants"
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={values.wantsToPlay}
-                        onChange={(event) =>
+                        value={Math.round((values.wantsToPlay / 10) * 2) / 2}
+                        onChange={(interestOnPads) =>
                             setValues((current) => ({
                                 ...current,
-                                wantsToPlay: Number(event.target.value),
+                                wantsToPlay: Math.round(interestOnPads * 10),
                             }))
                         }
                     />
                 </div>
             ) : (
                 <div>
-                    <FormLabel htmlFor="library-edit-rating">Ocena (0-100)</FormLabel>
-                    <Input
+                    <FormLabel htmlFor="library-edit-rating">Ocena</FormLabel>
+                    <RatingStars
                         id="library-edit-rating"
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={values.rating}
-                        onChange={(event) =>
+                        value={Math.round((values.rating / 10) * 2) / 2}
+                        onChange={(ratingInStars) =>
                             setValues((current) => ({
                                 ...current,
-                                rating: Number(event.target.value),
+                                rating: Math.round(ratingInStars * 10),
                             }))
                         }
                     />
@@ -136,12 +108,7 @@ export const LibraryEntryForm = ({
                     {submitLabel}
                 </Button>
                 {onCancel ? (
-                    <Button
-                        type="button"
-                        variant="secondary"
-                        startIcon={XIcon}
-                        onClick={onCancel}
-                    >
+                    <Button type="button" variant="secondary" onClick={onCancel}>
                         Anuluj
                     </Button>
                 ) : null}

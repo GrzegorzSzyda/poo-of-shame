@@ -1,6 +1,6 @@
 import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react'
 import { cx } from 'cva'
-import { useMemo, useState } from 'react'
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '~/components/Button'
 import { Input } from '~/components/Input'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -28,6 +28,10 @@ export const LibraryGameSearch = ({
     className,
 }: Props) => {
     const [query, setQuery] = useState('')
+    const [isOpen, setIsOpen] = useState(false)
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1)
+    const containerRef = useRef<HTMLDivElement | null>(null)
+    const itemRefs = useRef<Array<HTMLLIElement | null>>([])
 
     const normalizedQuery = query.trim().toLowerCase()
     const filteredGames = useMemo(() => {
@@ -37,31 +41,166 @@ export const LibraryGameSearch = ({
             .slice(0, 12)
     }, [games, normalizedQuery])
 
+    const selectableIndexes = useMemo(
+        () =>
+            filteredGames
+                .map((game, index) => {
+                    const isInLibrary = libraryGameIds.has(game._id)
+                    const isAdding = addingGameId === game._id
+                    return isInLibrary || isAdding ? null : index
+                })
+                .filter((index): index is number => index !== null),
+        [addingGameId, filteredGames, libraryGameIds],
+    )
+
+    useEffect(() => {
+        const handlePointerDown = (event: MouseEvent) => {
+            if (!containerRef.current) return
+            if (containerRef.current.contains(event.target as Node)) return
+            setIsOpen(false)
+            setHighlightedIndex(-1)
+        }
+
+        document.addEventListener('mousedown', handlePointerDown)
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown)
+        }
+    }, [])
+
+    useEffect(() => {
+        itemRefs.current = itemRefs.current.slice(0, filteredGames.length)
+        if (!isOpen || normalizedQuery.length === 0 || selectableIndexes.length === 0) {
+            setHighlightedIndex(-1)
+            return
+        }
+
+        if (!selectableIndexes.includes(highlightedIndex)) {
+            const firstSelectableIndex = selectableIndexes[0]
+            if (firstSelectableIndex !== undefined) {
+                setHighlightedIndex(firstSelectableIndex)
+            }
+        }
+    }, [
+        filteredGames.length,
+        highlightedIndex,
+        isOpen,
+        normalizedQuery.length,
+        selectableIndexes,
+    ])
+
+    useEffect(() => {
+        if (highlightedIndex < 0) return
+        itemRefs.current[highlightedIndex]?.scrollIntoView({
+            block: 'nearest',
+        })
+    }, [highlightedIndex])
+
+    const handleAdd = (game: GameItem) => {
+        onAdd(game)
+        setQuery('')
+        setIsOpen(false)
+        setHighlightedIndex(-1)
+    }
+
+    const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        const hasResults = filteredGames.length > 0
+        if (event.key === 'Escape') {
+            event.preventDefault()
+            setIsOpen(false)
+            setHighlightedIndex(-1)
+            return
+        }
+
+        if (!hasResults || selectableIndexes.length === 0) return
+
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault()
+            if (!isOpen) setIsOpen(true)
+
+            const currentPosition = selectableIndexes.indexOf(highlightedIndex)
+            const direction = event.key === 'ArrowDown' ? 1 : -1
+            const nextPosition =
+                currentPosition === -1
+                    ? direction === 1
+                        ? 0
+                        : selectableIndexes.length - 1
+                    : (currentPosition + direction + selectableIndexes.length) %
+                      selectableIndexes.length
+
+            const nextHighlighted = selectableIndexes[nextPosition]
+            if (nextHighlighted !== undefined) {
+                setHighlightedIndex(nextHighlighted)
+            }
+            return
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault()
+            const indexToAdd =
+                highlightedIndex >= 0 && selectableIndexes.includes(highlightedIndex)
+                    ? highlightedIndex
+                    : selectableIndexes[0]
+            if (indexToAdd === undefined) return
+            const gameToAdd = filteredGames[indexToAdd]
+            if (gameToAdd) {
+                handleAdd(gameToAdd)
+            }
+        }
+    }
+
     return (
-        <div className={cx('relative', className)}>
-            <div className="relative">
+        <div
+            ref={containerRef}
+            className={cx(
+                'relative',
+                isOpen && normalizedQuery.length > 0 ? 'z-30' : undefined,
+                className,
+            )}
+        >
+            {isOpen && normalizedQuery.length > 0 ? (
+                <button
+                    type="button"
+                    aria-label="Zamknij wyniki wyszukiwania"
+                    className="fixed inset-0 z-20 bg-black/45"
+                    onClick={() => setIsOpen(false)}
+                />
+            ) : null}
+            <div className="relative z-30">
                 <MagnifyingGlassIcon className="text-text/60 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
                 <Input
                     id="library-game-search"
                     className="pl-10"
                     placeholder="Wyszukaj grę i dodaj do kupki"
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                        setQuery(event.target.value)
+                        setIsOpen(true)
+                    }}
+                    onFocus={() => setIsOpen(true)}
+                    onKeyDown={handleInputKeyDown}
                 />
             </div>
 
-            {normalizedQuery.length > 0 ? (
+            {isOpen && normalizedQuery.length > 0 ? (
                 <ul className="border-text/20 bg-bg absolute z-30 mt-2 max-h-96 w-full space-y-2 overflow-auto rounded-md border p-2 shadow-[0_12px_28px_rgba(0,0,0,0.35)]">
                     {filteredGames.length === 0 ? (
                         <li className="text-text/70 text-sm">Brak dopasowanych gier.</li>
                     ) : (
-                        filteredGames.map((game) => {
+                        filteredGames.map((game, gameIndex) => {
                             const isInLibrary = libraryGameIds.has(game._id)
                             const isAdding = addingGameId === game._id
                             return (
                                 <li
                                     key={game._id}
-                                    className="bg-bg/20 hover:bg-text/10 flex items-center gap-3 rounded-md p-2 transition-colors"
+                                    ref={(element) => {
+                                        itemRefs.current[gameIndex] = element
+                                    }}
+                                    className={cx(
+                                        'bg-bg/20 hover:bg-text/10 flex items-center gap-3 rounded-md p-2 transition-colors',
+                                        highlightedIndex === gameIndex
+                                            ? 'bg-text/15'
+                                            : undefined,
+                                    )}
                                 >
                                     {game.coverImageUrl ? (
                                         <img
@@ -76,7 +215,7 @@ export const LibraryGameSearch = ({
                                         </div>
                                     )}
                                     <div className="min-w-0 flex-1">
-                                        <div className="text-text truncate">
+                                        <div className="text-text -mt-2 truncate">
                                             {game.title}
                                         </div>
                                         <div className="text-text/70 text-sm">
@@ -93,10 +232,7 @@ export const LibraryGameSearch = ({
                                                 : 'Dodaj do kupki'
                                         }
                                         disabled={isInLibrary || isAdding}
-                                        onClick={() => {
-                                            onAdd(game)
-                                            setQuery('')
-                                        }}
+                                        onClick={() => handleAdd(game)}
                                     >
                                         {isInLibrary
                                             ? 'W kupce'

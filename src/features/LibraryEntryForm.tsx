@@ -14,29 +14,23 @@ import {
     type ProgressStatus,
 } from './libraryShared'
 
-type GameOption = {
-    id: string
-    label: string
-}
+const shouldShowWantsToPlay = (status: ProgressStatus) =>
+    status === 'backlog' || status === 'playing'
 
 type Props = {
-    mode: 'add' | 'edit'
     initialValues: LibraryEntryDraft
     submitLabel: string
     onSubmit: (values: LibraryEntryDraft) => Promise<void>
     onCancel?: () => void
     errorMessage?: string | null
-    gameOptions?: GameOption[]
 }
 
 export const LibraryEntryForm = ({
-    mode,
     initialValues,
     submitLabel,
     onSubmit,
     onCancel,
     errorMessage,
-    gameOptions = [],
 }: Props) => {
     const [values, setValues] = useState<LibraryEntryDraft>(initialValues)
 
@@ -60,29 +54,6 @@ export const LibraryEntryForm = ({
 
     return (
         <Form onSubmit={handleSubmit}>
-            {mode === 'add' ? (
-                <div>
-                    <FormLabel htmlFor="library-game">Gra</FormLabel>
-                    <Select
-                        id="library-game"
-                        value={values.gameId}
-                        onChange={(event) =>
-                            setValues((current) => ({
-                                ...current,
-                                gameId: event.target.value,
-                            }))
-                        }
-                    >
-                        <option value="">Wybierz grę</option>
-                        {gameOptions.map((game) => (
-                            <option key={game.id} value={game.id}>
-                                {game.label}
-                            </option>
-                        ))}
-                    </Select>
-                </div>
-            ) : null}
-
             <div>
                 <FormLabel>Platformy</FormLabel>
                 <div className="flex flex-wrap gap-3">
@@ -103,45 +74,9 @@ export const LibraryEntryForm = ({
             </div>
 
             <div>
-                <FormLabel htmlFor={`${mode}-library-rating`}>Ocena (0-100)</FormLabel>
-                <Input
-                    id={`${mode}-library-rating`}
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={values.rating}
-                    onChange={(event) =>
-                        setValues((current) => ({
-                            ...current,
-                            rating: Number(event.target.value),
-                        }))
-                    }
-                />
-            </div>
-
-            <div>
-                <FormLabel htmlFor={`${mode}-library-wants`}>
-                    Chcę zagrać (0-100)
-                </FormLabel>
-                <Input
-                    id={`${mode}-library-wants`}
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={values.wantsToPlay}
-                    onChange={(event) =>
-                        setValues((current) => ({
-                            ...current,
-                            wantsToPlay: Number(event.target.value),
-                        }))
-                    }
-                />
-            </div>
-
-            <div>
-                <FormLabel htmlFor={`${mode}-library-status`}>Status</FormLabel>
+                <FormLabel htmlFor="library-edit-status">Status</FormLabel>
                 <Select
-                    id={`${mode}-library-status`}
+                    id="library-edit-status"
                     value={values.progressStatus}
                     onChange={(event) =>
                         setValues((current) => ({
@@ -157,6 +92,44 @@ export const LibraryEntryForm = ({
                     ))}
                 </Select>
             </div>
+
+            {shouldShowWantsToPlay(values.progressStatus) ? (
+                <div>
+                    <FormLabel htmlFor="library-edit-wants">
+                        Zainteresowanie (0-100)
+                    </FormLabel>
+                    <Input
+                        id="library-edit-wants"
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={values.wantsToPlay}
+                        onChange={(event) =>
+                            setValues((current) => ({
+                                ...current,
+                                wantsToPlay: Number(event.target.value),
+                            }))
+                        }
+                    />
+                </div>
+            ) : (
+                <div>
+                    <FormLabel htmlFor="library-edit-rating">Ocena (0-100)</FormLabel>
+                    <Input
+                        id="library-edit-rating"
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={values.rating}
+                        onChange={(event) =>
+                            setValues((current) => ({
+                                ...current,
+                                rating: Number(event.target.value),
+                            }))
+                        }
+                    />
+                </div>
+            )}
 
             <FormActions align="center">
                 <Button type="submit" startIcon={FloppyDiskIcon}>

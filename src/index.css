@@ -17,4 +17,9 @@
     body {
         @apply m-0 min-h-screen;
     }
+
+    select option {
+        background: #170a27;
+        color: #b6a0ce;
+    }
 }

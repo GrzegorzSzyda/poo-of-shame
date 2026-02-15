@@ -69,12 +69,11 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
         <Drawer
             isOpen={isOpen}
             onClose={onClose}
-            title="Edytuj wpis biblioteki"
+            title={entry?.game?.title ?? 'Edytuj wpis'}
             titleStartIcon={PencilSimpleIcon}
         >
             {entry ? (
                 <LibraryEntryForm
-                    mode="edit"
                     initialValues={{
                         gameId: entry.gameId,
                         platforms: [...entry.platforms],

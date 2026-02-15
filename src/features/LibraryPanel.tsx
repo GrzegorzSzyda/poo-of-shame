@@ -1,13 +1,19 @@
-import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
-import { usePaginatedQuery, useQuery } from 'convex/react'
+import { ListBulletsIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
+import { H1 } from '~/components/H1'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
-import { LibraryAddDrawer } from './LibraryAddDrawer'
 import { LibraryDeleteDrawer } from './LibraryDeleteDrawer'
 import { LibraryEditDrawer } from './LibraryEditDrawer'
-import { type Platform, type ProgressStatus } from './libraryShared'
+import { LibraryGameSearch } from './LibraryGameSearch'
+import {
+    type Platform,
+    type ProgressStatus,
+    parseLibraryErrorCode,
+    toLibraryErrorMessage,
+} from './libraryShared'
 
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
@@ -23,12 +29,23 @@ type LibraryEntry = {
     } | null
 }
 
+type GameSearchItem = {
+    _id: Id<'games'>
+    title: string
+    releaseYear: number
+    coverImageUrl?: string
+}
+
+const shouldShowWantsToPlay = (status: ProgressStatus) =>
+    status === 'backlog' || status === 'playing'
+
 type Props = {
     authReady: boolean
 }
 
 export const LibraryPanel = ({ authReady }: Props) => {
     const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
+    const addToLibrary = useMutation(api.library.addToLibrary)
     const {
         results: entries,
         status: entriesStatus,
@@ -37,10 +54,10 @@ export const LibraryPanel = ({ authReady }: Props) => {
         initialNumItems: 50,
     })
 
-    const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false)
-    const [editingEntryId, setEditingEntryId] = useState<Id<'libraryEntries'> | null>(
-        null,
-    )
+    const [addingGameId, setAddingGameId] = useState<string | null>(null)
+    const [actionErrorCode, setActionErrorCode] = useState<string | null>(null)
+    const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
+    const [editingEntry, setEditingEntry] = useState<LibraryEntry | null>(null)
     const [deletingEntryId, setDeletingEntryId] = useState<Id<'libraryEntries'> | null>(
         null,
     )
@@ -58,28 +75,66 @@ export const LibraryPanel = ({ authReady }: Props) => {
         [entries],
     )
 
-    const editingEntry =
-        editingEntryId !== null
-            ? ((entryById.get(editingEntryId) as LibraryEntry | undefined) ?? null)
-            : null
+    const libraryGameIds = useMemo(
+        () => new Set(entries.map((entry) => String(entry.gameId))),
+        [entries],
+    )
+
     const deletingEntry =
         deletingEntryId !== null
             ? ((entryById.get(deletingEntryId) as LibraryEntry | undefined) ?? null)
             : null
 
+    const handleAddFromSearch = async (game: GameSearchItem) => {
+        setActionErrorCode(null)
+        setAddingGameId(game._id)
+
+        try {
+            const entryId = await addToLibrary({
+                gameId: game._id,
+                platforms: [],
+                rating: 50,
+                wantsToPlay: 50,
+                progressStatus: 'backlog',
+            })
+
+            setEditingEntry({
+                _id: entryId,
+                gameId: game._id,
+                platforms: [],
+                rating: 50,
+                wantsToPlay: 50,
+                progressStatus: 'backlog',
+                game: {
+                    title: game.title,
+                    releaseYear: game.releaseYear,
+                    coverImageUrl: game.coverImageUrl,
+                },
+            })
+            setIsEditDrawerOpen(true)
+        } catch (error) {
+            setActionErrorCode(parseLibraryErrorCode(error))
+        } finally {
+            setAddingGameId(null)
+        }
+    }
+
     return (
         <section className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-text text-2xl">Moja biblioteka</h2>
-                <Button
-                    type="button"
-                    startIcon={PlusIcon}
-                    title="Dodaj wpis do biblioteki"
-                    onClick={() => setIsAddDrawerOpen(true)}
-                >
-                    Dodaj do biblioteki
-                </Button>
+            <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-12">
+                <H1 startIcon={ListBulletsIcon}>Moja kupka</H1>
+                <LibraryGameSearch
+                    className="w-full"
+                    games={games}
+                    libraryGameIds={libraryGameIds}
+                    addingGameId={addingGameId}
+                    onAdd={(game) => void handleAddFromSearch(game)}
+                />
             </div>
+
+            {actionErrorCode ? (
+                <p className="text-red-700">{toLibraryErrorMessage(actionErrorCode)}</p>
+            ) : null}
 
             {!entries ? (
                 <div className="text-text/70">Ładowanie biblioteki...</div>
@@ -135,9 +190,10 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                                 variant="ghost"
                                                 startIcon={PencilSimpleIcon}
                                                 title="Edytuj wpis biblioteki"
-                                                onClick={() =>
-                                                    setEditingEntryId(entry._id)
-                                                }
+                                                onClick={() => {
+                                                    setEditingEntry(entry as LibraryEntry)
+                                                    setIsEditDrawerOpen(true)
+                                                }}
                                             >
                                                 <span className="sr-only">Edytuj</span>
                                             </Button>
@@ -158,8 +214,13 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                     <div className="text-text/80 mt-3 grid gap-1 text-sm sm:grid-cols-2">
                                         <div>Status: {entry.progressStatus}</div>
                                         <div>Platformy: {entry.platforms.join(', ')}</div>
-                                        <div>Ocena: {entry.rating}</div>
-                                        <div>Wants to play: {entry.wantsToPlay}</div>
+                                        {shouldShowWantsToPlay(entry.progressStatus) ? (
+                                            <div>
+                                                Zainteresowanie: {entry.wantsToPlay}
+                                            </div>
+                                        ) : (
+                                            <div>Ocena: {entry.rating}</div>
+                                        )}
                                     </div>
                                 </li>
                             )
@@ -179,14 +240,12 @@ export const LibraryPanel = ({ authReady }: Props) => {
                 </Button>
             ) : null}
 
-            <LibraryAddDrawer
-                isOpen={isAddDrawerOpen}
-                onClose={() => setIsAddDrawerOpen(false)}
-                games={games}
-            />
             <LibraryEditDrawer
-                isOpen={editingEntry !== null}
-                onClose={() => setEditingEntryId(null)}
+                isOpen={isEditDrawerOpen}
+                onClose={() => {
+                    setEditingEntry(null)
+                    setIsEditDrawerOpen(false)
+                }}
                 entry={editingEntry}
             />
             <LibraryDeleteDrawer

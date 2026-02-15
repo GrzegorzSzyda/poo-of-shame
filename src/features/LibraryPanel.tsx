@@ -1,6 +1,12 @@
 import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useMemo, useState } from 'react'
+import { Button } from '~/components/Button'
+import { Form } from '~/components/Form'
+import { FormActions } from '~/components/FormActions'
+import { FormLabel } from '~/components/FormLabel'
+import { Input } from '~/components/Input'
+import { Select } from '~/components/Select'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -181,90 +187,87 @@ export const LibraryPanel = ({ authReady }: Props) => {
         <section className="mt-8 border-2 p-4">
             <h2 className="mb-3 text-2xl font-bold">Moja biblioteka</h2>
 
-            <form onSubmit={handleAdd} className="mb-6 space-y-3">
+            <Form onSubmit={handleAdd} className="mb-6">
                 <div>
-                    <label>
-                        Gra:
-                        <select
-                            value={gameId}
-                            onChange={(event) => setGameId(event.target.value)}
-                            className="ml-2"
-                        >
-                            <option value="">Wybierz grę</option>
-                            {games?.map((game) => (
-                                <option key={game._id} value={game._id}>
-                                    {game.title} ({game.releaseYear})
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <FormLabel htmlFor="library-game">Gra</FormLabel>
+                    <Select
+                        id="library-game"
+                        value={gameId}
+                        onChange={(event) => setGameId(event.target.value)}
+                    >
+                        <option value="">Wybierz grę</option>
+                        {games?.map((game) => (
+                            <option key={game._id} value={game._id}>
+                                {game.title} ({game.releaseYear})
+                            </option>
+                        ))}
+                    </Select>
                 </div>
 
                 <div>
-                    <p>Platformy:</p>
+                    <FormLabel>Platformy</FormLabel>
                     {PLATFORM_OPTIONS.map((platform) => (
-                        <label key={platform} className="mr-3 inline-block">
+                        <label
+                            key={platform}
+                            className="mr-3 inline-flex items-center gap-2 text-sm"
+                        >
                             <input
                                 type="checkbox"
                                 checked={platforms.includes(platform)}
                                 onChange={() => toggleAddPlatform(platform)}
-                            />{' '}
+                            />
                             {platform}
                         </label>
                     ))}
                 </div>
 
                 <div>
-                    <label>
-                        Ocena (0-100):
-                        <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={rating}
-                            onChange={(event) => setRating(Number(event.target.value))}
-                            className="ml-2"
-                        />
-                    </label>
+                    <FormLabel htmlFor="library-rating">Ocena (0-100)</FormLabel>
+                    <Input
+                        id="library-rating"
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={rating}
+                        onChange={(event) => setRating(Number(event.target.value))}
+                    />
                 </div>
 
                 <div>
-                    <label>
-                        Chcę zagrać (0-100):
-                        <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            value={wantsToPlay}
-                            onChange={(event) =>
-                                setWantsToPlay(Number(event.target.value))
-                            }
-                            className="ml-2"
-                        />
-                    </label>
+                    <FormLabel htmlFor="library-wants-to-play">
+                        Chcę zagrać (0-100)
+                    </FormLabel>
+                    <Input
+                        id="library-wants-to-play"
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={wantsToPlay}
+                        onChange={(event) => setWantsToPlay(Number(event.target.value))}
+                    />
                 </div>
 
                 <div>
-                    <label>
-                        Status:
-                        <select
-                            value={progressStatus}
-                            onChange={(event) =>
-                                setProgressStatus(event.target.value as ProgressStatus)
-                            }
-                            className="ml-2"
-                        >
-                            {PROGRESS_STATUS_OPTIONS.map((status) => (
-                                <option key={status} value={status}>
-                                    {status}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                    <FormLabel htmlFor="library-status">Status</FormLabel>
+                    <Select
+                        id="library-status"
+                        value={progressStatus}
+                        onChange={(event) =>
+                            setProgressStatus(event.target.value as ProgressStatus)
+                        }
+                    >
+                        {PROGRESS_STATUS_OPTIONS.map((status) => (
+                            <option key={status} value={status}>
+                                {status}
+                            </option>
+                        ))}
+                    </Select>
                 </div>
 
-                <button type="submit">Dodaj do biblioteki</button>
-            </form>
+                <FormActions align="start">
+                    <Button type="submit">Dodaj do biblioteki</Button>
+                </FormActions>
+            </Form>
 
             {errorMessage ? <p className="mb-4 text-red-700">{errorMessage}</p> : null}
 
@@ -310,16 +313,16 @@ export const LibraryPanel = ({ authReady }: Props) => {
                             </div>
 
                             {currentEditState ? (
-                                <form
+                                <Form
                                     onSubmit={handleUpdate}
-                                    className="mt-3 space-y-2 border-t pt-3"
+                                    className="mt-3 border-t pt-3"
                                 >
                                     <div>
-                                        <p>Platformy:</p>
+                                        <FormLabel>Platformy</FormLabel>
                                         {PLATFORM_OPTIONS.map((platform) => (
                                             <label
                                                 key={platform}
-                                                className="mr-3 inline-block"
+                                                className="mr-3 inline-flex items-center gap-2 text-sm"
                                             >
                                                 <input
                                                     type="checkbox"
@@ -329,113 +332,120 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                                     onChange={() =>
                                                         toggleEditPlatform(platform)
                                                     }
-                                                />{' '}
+                                                />
                                                 {platform}
                                             </label>
                                         ))}
                                     </div>
 
                                     <div>
-                                        <label>
-                                            Ocena:
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                max={100}
-                                                value={currentEditState.rating}
-                                                onChange={(event) =>
-                                                    setEditState((current) =>
-                                                        current
-                                                            ? {
-                                                                  ...current,
-                                                                  rating: Number(
-                                                                      event.target.value,
-                                                                  ),
-                                                              }
-                                                            : current,
-                                                    )
-                                                }
-                                                className="ml-2"
-                                            />
-                                        </label>
+                                        <FormLabel
+                                            htmlFor={`library-edit-rating-${entry._id}`}
+                                        >
+                                            Ocena
+                                        </FormLabel>
+                                        <Input
+                                            id={`library-edit-rating-${entry._id}`}
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            value={currentEditState.rating}
+                                            onChange={(event) =>
+                                                setEditState((current) =>
+                                                    current
+                                                        ? {
+                                                              ...current,
+                                                              rating: Number(
+                                                                  event.target.value,
+                                                              ),
+                                                          }
+                                                        : current,
+                                                )
+                                            }
+                                        />
                                     </div>
 
                                     <div>
-                                        <label>
-                                            Chcę zagrać (0-100):
-                                            <input
-                                                type="number"
-                                                min={0}
-                                                max={100}
-                                                value={currentEditState.wantsToPlay}
-                                                onChange={(event) =>
-                                                    setEditState((current) =>
-                                                        current
-                                                            ? {
-                                                                  ...current,
-                                                                  wantsToPlay: Number(
-                                                                      event.target.value,
-                                                                  ),
-                                                              }
-                                                            : current,
-                                                    )
-                                                }
-                                                className="ml-2"
-                                            />
-                                        </label>
+                                        <FormLabel
+                                            htmlFor={`library-edit-wants-${entry._id}`}
+                                        >
+                                            Chcę zagrać (0-100)
+                                        </FormLabel>
+                                        <Input
+                                            id={`library-edit-wants-${entry._id}`}
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            value={currentEditState.wantsToPlay}
+                                            onChange={(event) =>
+                                                setEditState((current) =>
+                                                    current
+                                                        ? {
+                                                              ...current,
+                                                              wantsToPlay: Number(
+                                                                  event.target.value,
+                                                              ),
+                                                          }
+                                                        : current,
+                                                )
+                                            }
+                                        />
                                     </div>
 
                                     <div>
-                                        <label>
-                                            Status:
-                                            <select
-                                                value={currentEditState.progressStatus}
-                                                onChange={(event) =>
-                                                    setEditState((current) =>
-                                                        current
-                                                            ? {
-                                                                  ...current,
-                                                                  progressStatus: event
-                                                                      .target
-                                                                      .value as ProgressStatus,
-                                                              }
-                                                            : current,
-                                                    )
-                                                }
-                                                className="ml-2"
-                                            >
-                                                {PROGRESS_STATUS_OPTIONS.map((status) => (
-                                                    <option key={status} value={status}>
-                                                        {status}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </label>
+                                        <FormLabel
+                                            htmlFor={`library-edit-status-${entry._id}`}
+                                        >
+                                            Status
+                                        </FormLabel>
+                                        <Select
+                                            id={`library-edit-status-${entry._id}`}
+                                            value={currentEditState.progressStatus}
+                                            onChange={(event) =>
+                                                setEditState((current) =>
+                                                    current
+                                                        ? {
+                                                              ...current,
+                                                              progressStatus: event.target
+                                                                  .value as ProgressStatus,
+                                                          }
+                                                        : current,
+                                                )
+                                            }
+                                        >
+                                            {PROGRESS_STATUS_OPTIONS.map((status) => (
+                                                <option key={status} value={status}>
+                                                    {status}
+                                                </option>
+                                            ))}
+                                        </Select>
                                     </div>
 
-                                    <div className="space-x-2">
-                                        <button type="submit">Zapisz</button>
-                                        <button
+                                    <FormActions align="start">
+                                        <Button type="submit">Zapisz</Button>
+                                        <Button
                                             type="button"
+                                            variant="secondary"
                                             onClick={() => setEditState(null)}
                                         >
                                             Anuluj
-                                        </button>
-                                    </div>
-                                </form>
+                                        </Button>
+                                    </FormActions>
+                                </Form>
                             ) : null}
                         </li>
                     )
                 })}
             </ul>
             {entriesStatus === 'CanLoadMore' ? (
-                <button
+                <Button
                     type="button"
                     className="mt-4"
+                    variant="secondary"
                     onClick={() => loadMoreEntries(50)}
                 >
                     Załaduj więcej wpisów
-                </button>
+                </Button>
             ) : null}
         </section>
     )

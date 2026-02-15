@@ -9,7 +9,7 @@ const buttonStyles = cva({
                 'bg-teal-400 text-teal-950 shadow-[0_0_16px_rgba(45,212,191,0.34)] hover:bg-teal-300 focus-visible:ring-teal-300 focus-visible:ring-offset-bg',
             secondary:
                 'border border-teal-300/70 bg-teal-400/10 text-teal-200 hover:border-teal-200 hover:bg-teal-300/20 hover:text-teal-100 focus-visible:ring-teal-300/70 focus-visible:ring-offset-bg',
-            ghost: 'bg-transparent text-teal-200 hover:bg-teal-300/15 hover:text-teal-100 focus-visible:ring-teal-300/60 focus-visible:ring-offset-bg',
+            ghost: 'bg-transparent text-teal-400 hover:bg-teal-300/15 hover:text-teal-300 focus-visible:ring-teal-300/60 focus-visible:ring-offset-bg',
         },
         size: {
             sm: 'h-8 px-3 text-sm',

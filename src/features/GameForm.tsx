@@ -1,6 +1,12 @@
+import { FloppyDiskIcon } from '@phosphor-icons/react'
 import { ConvexError } from 'convex/values'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
+import { CoverPreview } from '~/components/CoverPreview'
+import { Form } from '~/components/Form'
+import { FormActions } from '~/components/FormActions'
+import { FormLabel } from '~/components/FormLabel'
+import { Input } from '~/components/Input'
 
 export const gameFormErrorMessages = {
     TITLE_REQUIRED: 'Podaj tytuł gry.',
@@ -70,19 +76,23 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
     }
 
     return (
-        <form onSubmit={handleSubmit}>
+        <Form onSubmit={handleSubmit}>
             <div>
-                <input
-                    placeholder="Tytuł gry"
+                <FormLabel htmlFor="game-form-title">Tytuł gry</FormLabel>
+                <Input
+                    id="game-form-title"
+                    placeholder="Hollow Knight"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                 />
             </div>
 
             <div>
-                <input
+                <FormLabel htmlFor="game-form-release-year">Rok wydania</FormLabel>
+                <Input
+                    id="game-form-release-year"
                     type="number"
-                    placeholder="Rok wydania"
+                    placeholder="2017"
                     value={releaseYear}
                     onChange={(e) =>
                         setReleaseYear(
@@ -92,16 +102,35 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
                 />
             </div>
 
-            <div>
-                <input
-                    placeholder="Cover URL (opcjonalnie)"
-                    value={coverImageUrl}
-                    onChange={(e) => setCoverImageUrl(e.target.value)}
+            <div className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3">
+                <CoverPreview
+                    url={coverImageUrl}
+                    title={title}
+                    className="justify-self-center"
                 />
+                <div>
+                    <FormLabel htmlFor="game-form-cover-image">
+                        Cover URL (opcjonalnie)
+                    </FormLabel>
+                    <Input
+                        id="game-form-cover-image"
+                        type="url"
+                        placeholder="https://..."
+                        value={coverImageUrl}
+                        onChange={(e) => setCoverImageUrl(e.target.value)}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                    />
+                </div>
             </div>
 
-            <Button type="submit">{submitLabel}</Button>
+            <FormActions align="start">
+                <Button type="submit" startIcon={FloppyDiskIcon}>
+                    {submitLabel}
+                </Button>
+            </FormActions>
             {errorMessage && <div className="text-red-800">{errorMessage}</div>}
-        </form>
+        </Form>
     )
 }

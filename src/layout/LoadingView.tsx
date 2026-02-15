@@ -1,4 +1,4 @@
-import { CircleNotch } from '@phosphor-icons/react'
+import { CircleNotchIcon } from '@phosphor-icons/react'
 import { Logo } from './Logo'
 
 type LoadingViewProps = {
@@ -14,8 +14,8 @@ export const LoadingView = ({ title, message }: LoadingViewProps) => {
             </div>
             <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2 text-teal-200">
-                    <CircleNotch className="h-8 w-8 animate-spin" />
-                    <p className="text-xl font-semibold text-white">{title}</p>
+                    <CircleNotchIcon className="h-8 w-8 animate-spin" />
+                    <p className="text-text text-xl font-semibold">{title}</p>
                 </div>
                 <p className="text-text/90 max-w-xl text-base">{message}</p>
             </div>

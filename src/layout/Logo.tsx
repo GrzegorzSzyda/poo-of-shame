@@ -8,7 +8,7 @@ export const Logo = () => (
             className="flex flex-col items-center p-4"
         >
             <img src={logo} alt="Poo of Shame" />
-            <h1 className="pt-2 text-center text-3xl leading-5 font-bold text-white uppercase">
+            <h1 className="text-text pt-2 text-center text-3xl leading-5 font-bold uppercase">
                 Poo of
                 <br />
                 Shame

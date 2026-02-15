@@ -1,4 +1,4 @@
-import { WarningCircle } from '@phosphor-icons/react'
+import { WarningCircleIcon } from '@phosphor-icons/react'
 import { Logo } from './Logo'
 
 type ErrorViewProps = {
@@ -12,8 +12,8 @@ export const ErrorView = ({ title, message }: ErrorViewProps) => {
             <Logo />
             <div className="space-y-3">
                 <div className="flex items-center justify-center gap-2 text-teal-200">
-                    <WarningCircle className="h-8 w-8" />
-                    <p className="text-xl font-semibold text-white">{title}</p>
+                    <WarningCircleIcon className="h-8 w-8" />
+                    <p className="text-text text-xl font-semibold">{title}</p>
                 </div>
                 <p className="text-text/90 max-w-xl text-base">{message}</p>
             </div>

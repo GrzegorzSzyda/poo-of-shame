@@ -1,8 +1,14 @@
+import { PlusIcon } from '@phosphor-icons/react'
 import { useMutation } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useState } from 'react'
 import type { IgdbGame } from '~/api/IgdbGame'
 import { Button } from '~/components/Button'
+import { CoverPreview } from '~/components/CoverPreview'
+import { Form } from '~/components/Form'
+import { FormActions } from '~/components/FormActions'
+import { FormLabel } from '~/components/FormLabel'
+import { Input } from '~/components/Input'
 import { Waiter } from '~/components/Waiter'
 import { api } from '../../convex/_generated/api'
 import { IgdbGamePicker } from './IgdbGamePicker'
@@ -30,9 +36,10 @@ export const gameFormErrorMessages: Record<string, string> = {
 
 type Props = {
     canManageGames: boolean | undefined
+    onDone?: () => void
 }
 
-export const AddGameForm = ({ canManageGames }: Props) => {
+export const AddGameForm = ({ canManageGames, onDone }: Props) => {
     const createGame = useMutation(api.games.create)
 
     const [title, setTitle] = useState('')
@@ -59,6 +66,7 @@ export const AddGameForm = ({ canManageGames }: Props) => {
             setTitle('')
             setReleaseYear('')
             setCoverImageUrl('')
+            onDone?.()
         } catch (error) {
             if (error instanceof ConvexError) {
                 setErrorCode(String(error.data))
@@ -81,26 +89,28 @@ export const AddGameForm = ({ canManageGames }: Props) => {
     }
 
     return (
-        <div className="border-text mb-5 border-2 p-5">
-            <h1 className="text-4xl font-bold">Dodaj grę</h1>
-
+        <div className="space-y-4">
             <Waiter>
                 <IgdbGamePicker onPick={handlePickFromIgdb} />
             </Waiter>
 
-            <form onSubmit={handleSubmit}>
+            <Form onSubmit={handleSubmit}>
                 <div>
-                    <input
-                        placeholder="Tytuł gry"
+                    <FormLabel htmlFor="game-title">Tytuł gry</FormLabel>
+                    <Input
+                        id="game-title"
+                        placeholder="Baldur's Gate 3"
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}
                     />
                 </div>
 
                 <div>
-                    <input
+                    <FormLabel htmlFor="game-release-year">Rok wydania</FormLabel>
+                    <Input
+                        id="game-release-year"
                         type="number"
-                        placeholder="Rok wydania"
+                        placeholder="2023"
                         value={releaseYear}
                         onChange={(event) =>
                             setReleaseYear(
@@ -112,28 +122,37 @@ export const AddGameForm = ({ canManageGames }: Props) => {
                     />
                 </div>
 
-                <div>
-                    <input
-                        placeholder="Cover URL (opcjonalnie)"
-                        value={coverImageUrl}
-                        onChange={(event) => setCoverImageUrl(event.target.value)}
+                <div className="grid grid-cols-[4rem_minmax(0,1fr)] items-center gap-3">
+                    <CoverPreview
+                        url={coverImageUrl}
+                        title={title}
+                        className="justify-self-center"
                     />
-                </div>
-                {coverImageUrl.length > 0 ? (
-                    <div className="mt-2">
-                        <img
-                            src={coverImageUrl}
-                            alt={`Okładka: ${title.length > 0 ? title : 'gra'}`}
-                            className="h-32 w-24 object-cover"
-                            loading="lazy"
+                    <div>
+                        <FormLabel htmlFor="game-cover-url">
+                            Cover URL (opcjonalnie)
+                        </FormLabel>
+                        <Input
+                            id="game-cover-url"
+                            type="url"
+                            placeholder="https://..."
+                            value={coverImageUrl}
+                            onChange={(event) => setCoverImageUrl(event.target.value)}
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
                         />
                     </div>
-                ) : null}
+                </div>
 
-                <Button type="submit">Dodaj grę</Button>
+                <FormActions align="center">
+                    <Button type="submit" startIcon={PlusIcon}>
+                        Dodaj grę
+                    </Button>
+                </FormActions>
 
                 {errorMessage && <div className="text-red-800">{errorMessage}</div>}
-            </form>
+            </Form>
         </div>
     )
 }

@@ -27,11 +27,15 @@ export const LibraryGameSearch = ({
     onAdd,
     className,
 }: Props) => {
+    const OVERLAY_FADE_MS = 420
     const [query, setQuery] = useState('')
     const [isOpen, setIsOpen] = useState(false)
     const [highlightedIndex, setHighlightedIndex] = useState<number>(-1)
+    const [isOverlayRendered, setIsOverlayRendered] = useState(false)
+    const [isOverlayVisible, setIsOverlayVisible] = useState(false)
     const containerRef = useRef<HTMLDivElement | null>(null)
     const itemRefs = useRef<Array<HTMLLIElement | null>>([])
+    const shouldShowOverlay = isOpen && query.trim().length > 0
 
     const normalizedQuery = query.trim().toLowerCase()
     const filteredGames = useMemo(() => {
@@ -95,6 +99,27 @@ export const LibraryGameSearch = ({
         })
     }, [highlightedIndex])
 
+    useEffect(() => {
+        if (shouldShowOverlay) {
+            setIsOverlayRendered(true)
+            const timer = window.setTimeout(() => setIsOverlayVisible(true), 20)
+            return () => window.clearTimeout(timer)
+        }
+
+        setIsOverlayVisible(false)
+    }, [shouldShowOverlay])
+
+    useEffect(() => {
+        if (shouldShowOverlay || !isOverlayRendered) {
+            return
+        }
+        const timer = window.setTimeout(
+            () => setIsOverlayRendered(false),
+            OVERLAY_FADE_MS,
+        )
+        return () => window.clearTimeout(timer)
+    }, [isOverlayRendered, shouldShowOverlay])
+
     const handleAdd = (game: GameItem) => {
         onAdd(game)
         setQuery('')
@@ -157,11 +182,11 @@ export const LibraryGameSearch = ({
                 className,
             )}
         >
-            {isOpen && normalizedQuery.length > 0 ? (
+            {isOverlayRendered ? (
                 <button
                     type="button"
                     aria-label="Zamknij wyniki wyszukiwania"
-                    className="fixed inset-0 z-20 bg-black/45"
+                    className={`overlay-fade fixed inset-0 z-20 bg-black/45 ${isOverlayVisible ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
                     onClick={() => setIsOpen(false)}
                 />
             ) : null}

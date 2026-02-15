@@ -1,5 +1,5 @@
 import { XIcon } from '@phosphor-icons/react'
-import { type ComponentType, type ReactNode, useEffect, useRef } from 'react'
+import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 'react'
 import { H1 } from './H1'
 
 type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
@@ -22,7 +22,10 @@ export const Drawer = ({
     onClose,
     children,
 }: DrawerProps) => {
+    const DRAWER_ANIMATION_MS = 520
     const closeButtonRef = useRef<HTMLButtonElement | null>(null)
+    const [isRendered, setIsRendered] = useState(isOpen)
+    const [isVisible, setIsVisible] = useState(false)
 
     useEffect(() => {
         if (!isOpen) return
@@ -45,15 +48,34 @@ export const Drawer = ({
         }
     }, [isOpen, onClose])
 
-    if (!isOpen) {
+    useEffect(() => {
+        if (isOpen) {
+            setIsRendered(true)
+            const timer = window.setTimeout(() => setIsVisible(true), 20)
+            return () => window.clearTimeout(timer)
+        }
+
+        setIsVisible(false)
+    }, [isOpen])
+
+    useEffect(() => {
+        if (isOpen || !isRendered) return
+        const timer = window.setTimeout(
+            () => setIsRendered(false),
+            DRAWER_ANIMATION_MS,
+        )
+        return () => window.clearTimeout(timer)
+    }, [isOpen, isRendered])
+
+    if (!isRendered) {
         return null
     }
 
     return (
-        <div className="fixed inset-0 z-50">
+        <div className={`fixed inset-0 z-50 ${isVisible ? '' : 'pointer-events-none'}`}>
             <button
                 type="button"
-                className="absolute inset-0 bg-black/70"
+                className={`overlay-fade absolute inset-0 bg-black/70 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
                 onClick={onClose}
                 aria-label="Zamknij panel"
             />
@@ -62,7 +84,7 @@ export const Drawer = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={title}
-                className="border-text/20 absolute top-0 right-0 flex h-full w-full max-w-2xl flex-col border-l bg-[linear-gradient(135deg,#1a1026_0%,#0f0619_100%)] p-6 shadow-[-24px_0_48px_rgba(0,0,0,0.4)]"
+                className={`border-text/20 absolute top-0 right-0 flex h-full w-full max-w-2xl flex-col border-l bg-[linear-gradient(135deg,#1a1026_0%,#0f0619_100%)] p-6 shadow-[-24px_0_48px_rgba(0,0,0,0.4)] transition-transform duration-[520ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${isVisible ? 'translate-x-0' : 'translate-x-[105%]'}`}
             >
                 <div className="mb-6 flex items-center justify-between gap-4">
                     <H1 startIcon={titleStartIcon} startIconWeight={titleStartIconWeight}>

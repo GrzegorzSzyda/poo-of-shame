@@ -42,7 +42,7 @@ export const ProgressStatusPills = ({
 }: ProgressStatusPillsProps) => (
     <div
         id={id}
-        className="border-text/25 bg-bg/40 inline-flex w-full overflow-hidden rounded-xl border"
+        className="bg-bg/40 inline-flex w-full overflow-hidden rounded-xl"
         role="radiogroup"
         aria-label="Status"
     >
@@ -57,7 +57,7 @@ export const ProgressStatusPills = ({
                     aria-checked={isActive}
                     data-active={isActive}
                     className={cx(
-                        'border-text/20 hover:bg-text/10 cursor-pointer px-3 py-2 text-sm transition-colors not-last:border-r',
+                        'hover:bg-text/10 cursor-pointer px-3 py-2 text-sm transition-colors',
                         'flex-1 text-center whitespace-nowrap',
                         progressStatusSelectorTone(status),
                     )}

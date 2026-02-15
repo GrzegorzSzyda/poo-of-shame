@@ -55,7 +55,7 @@ const PROGRESS_STATUS_META: Record<ProgressStatus, ProgressStatusMeta> = {
         label: 'Na kupce',
         textTone: 'text-teal-300',
         selectorTone:
-            'text-teal-400 hover:bg-teal-300/12 hover:text-teal-300 data-[active=true]:bg-teal-400/82 data-[active=true]:text-teal-950 data-[active=true]:shadow-[0_0_12px_rgba(45,212,191,0.28)]',
+            'text-teal-400 hover:bg-teal-300/12 hover:text-teal-300 data-[active=true]:bg-teal-400/82 data-[active=true]:text-teal-950',
         displayTone: 'border-teal-300/40 bg-teal-400/78 text-teal-950',
         usesWantsToPlay: true,
     },
@@ -63,7 +63,7 @@ const PROGRESS_STATUS_META: Record<ProgressStatus, ProgressStatusMeta> = {
         label: 'Ogrywana',
         textTone: 'text-sky-300',
         selectorTone:
-            'text-sky-400 hover:bg-sky-300/12 hover:text-sky-300 data-[active=true]:bg-sky-400/82 data-[active=true]:text-sky-950 data-[active=true]:shadow-[0_0_12px_rgba(56,189,248,0.28)]',
+            'text-sky-400 hover:bg-sky-300/12 hover:text-sky-300 data-[active=true]:bg-sky-400/82 data-[active=true]:text-sky-950',
         displayTone: 'border-sky-300/40 bg-sky-400/78 text-sky-950',
         usesWantsToPlay: true,
     },
@@ -71,7 +71,7 @@ const PROGRESS_STATUS_META: Record<ProgressStatus, ProgressStatusMeta> = {
         label: 'Ukończona',
         textTone: 'text-lime-300',
         selectorTone:
-            'text-lime-400 hover:bg-lime-300/12 hover:text-lime-300 data-[active=true]:bg-lime-400/82 data-[active=true]:text-lime-950 data-[active=true]:shadow-[0_0_12px_rgba(163,230,53,0.3)]',
+            'text-lime-400 hover:bg-lime-300/12 hover:text-lime-300 data-[active=true]:bg-lime-400/82 data-[active=true]:text-lime-950',
         displayTone: 'border-lime-300/40 bg-lime-400/78 text-lime-950',
         usesWantsToPlay: false,
     },
@@ -79,16 +79,16 @@ const PROGRESS_STATUS_META: Record<ProgressStatus, ProgressStatusMeta> = {
         label: 'Wymaksowana',
         textTone: 'text-amber-300',
         selectorTone:
-            'text-amber-400 hover:bg-amber-300/12 hover:text-amber-300 data-[active=true]:bg-amber-400/82 data-[active=true]:text-amber-950 data-[active=true]:shadow-[0_0_12px_rgba(251,191,36,0.28)]',
+            'text-amber-400 hover:bg-amber-300/12 hover:text-amber-300 data-[active=true]:bg-amber-400/82 data-[active=true]:text-amber-950',
         displayTone: 'border-amber-300/40 bg-amber-400/78 text-amber-950',
         usesWantsToPlay: false,
     },
     dropped: {
         label: 'Porzucona',
-        textTone: 'text-rose-300',
+        textTone: 'text-rose-500',
         selectorTone:
-            'text-rose-400 hover:bg-rose-300/12 hover:text-rose-300 data-[active=true]:bg-rose-400/82 data-[active=true]:text-rose-950 data-[active=true]:shadow-[0_0_12px_rgba(251,113,133,0.28)]',
-        displayTone: 'border-rose-300/40 bg-rose-400/78 text-rose-950',
+            'text-rose-500 hover:bg-rose-400/14 hover:text-rose-300 data-[active=true]:bg-rose-500/84 data-[active=true]:text-rose-50',
+        displayTone: 'border-rose-400/50 bg-rose-500/82 text-rose-50',
         usesWantsToPlay: false,
     },
 }

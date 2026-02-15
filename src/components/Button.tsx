@@ -24,7 +24,7 @@ const buttonStyles = cva({
             variant: 'primary',
             tone: 'brand',
             className:
-                'bg-teal-400 text-teal-950 shadow-[0_0_16px_rgba(45,212,191,0.34)] hover:bg-teal-300 focus-visible:ring-teal-300 focus-visible:ring-offset-bg',
+                'bg-teal-400 text-teal-950 hover:bg-teal-300 focus-visible:ring-teal-300 focus-visible:ring-offset-bg',
         },
         {
             variant: 'secondary',
@@ -42,7 +42,7 @@ const buttonStyles = cva({
             variant: 'primary',
             tone: 'danger',
             className:
-                'bg-red-500/85 text-red-50 shadow-[0_0_16px_rgba(239,68,68,0.3)] hover:bg-red-500 focus-visible:ring-red-400/70 focus-visible:ring-offset-bg',
+                'bg-red-500/85 text-red-50 hover:bg-red-500 focus-visible:ring-red-400/70 focus-visible:ring-offset-bg',
         },
         {
             variant: 'secondary',

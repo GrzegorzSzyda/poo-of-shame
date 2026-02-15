@@ -1,4 +1,4 @@
-import { useMutation, usePaginatedQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useMemo, useState } from 'react'
 import { api } from '../../convex/_generated/api'
@@ -65,11 +65,7 @@ type Props = {
 }
 
 export const LibraryPanel = ({ authReady }: Props) => {
-    const { results: games } = usePaginatedQuery(
-        api.games.list,
-        authReady ? {} : 'skip',
-        { initialNumItems: 100 },
-    )
+    const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
     const {
         results: entries,
         status: entriesStatus,

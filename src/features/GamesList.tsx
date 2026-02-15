@@ -1,4 +1,4 @@
-import { usePaginatedQuery } from 'convex/react'
+import { usePaginatedQuery, useQuery } from 'convex/react'
 import { useMemo } from 'react'
 import { api } from '../../convex/_generated/api'
 import { Game } from './Game'
@@ -9,13 +9,7 @@ type Props = {
 }
 
 export const GamesList = ({ authReady, canManageGames }: Props) => {
-    const {
-        results: games,
-        status: gamesStatus,
-        loadMore: loadMoreGames,
-    } = usePaginatedQuery(api.games.list, authReady ? {} : 'skip', {
-        initialNumItems: 24,
-    })
+    const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
     const { results: libraryEntries } = usePaginatedQuery(
         api.library.listMyLibraryFiltered,
         authReady ? {} : 'skip',
@@ -38,11 +32,6 @@ export const GamesList = ({ authReady, canManageGames }: Props) => {
                     />
                 ))}
             </ul>
-            {gamesStatus === 'CanLoadMore' ? (
-                <button type="button" onClick={() => loadMoreGames(24)}>
-                    Załaduj więcej gier
-                </button>
-            ) : null}
         </div>
     )
 }

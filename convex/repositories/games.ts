@@ -11,6 +11,10 @@ export const listGamesPage = async (
     return await ctx.db.query('games').paginate(paginationOpts)
 }
 
+export const listGames = async (ctx: QueryCtx) => {
+    return await ctx.db.query('games').collect()
+}
+
 export const findGameByTitleYear = async (
     ctx: MutationCtx,
     titleNormalized: string,

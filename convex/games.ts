@@ -18,6 +18,7 @@ import {
     deleteGameWithLinkedLibraryEntries,
     findGameByTitleYear,
     getGameById,
+    listGames,
     listGamesPage,
     syncLibrarySnapshotsForGame,
     updateGame,
@@ -37,6 +38,14 @@ export const canManage = query({
         await ensureAuthUserId(ctx)
         const identity = await ctx.auth.getUserIdentity()
         return canManageGamesIdentity(identity)
+    },
+})
+
+export const listAll = query({
+    args: {},
+    handler: async (ctx) => {
+        await ensureAuthUserId(ctx)
+        return await listGames(ctx)
     },
 })
 

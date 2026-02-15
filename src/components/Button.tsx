@@ -2,14 +2,14 @@ import { type VariantProps, cva, cx } from 'cva'
 import type { ButtonHTMLAttributes, ComponentType, ReactNode } from 'react'
 
 const buttonStyles = cva({
-    base: 'inline-flex items-center justify-center gap-2 rounded-md text-base font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 cursor-pointer',
+    base: 'inline-flex cursor-pointer items-center justify-center gap-2 rounded-md text-base font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60',
     variants: {
         variant: {
             primary:
-                'bg-text text-bg hover:bg-text/90 focus-visible:ring-text/70 focus-visible:ring-offset-bg',
+                'bg-teal-400 text-teal-950 shadow-[0_0_16px_rgba(45,212,191,0.34)] hover:bg-teal-300 focus-visible:ring-teal-300 focus-visible:ring-offset-bg',
             secondary:
-                'border border-text/30 bg-transparent text-text hover:border-text/60 hover:bg-text/10 focus-visible:ring-text/50 focus-visible:ring-offset-bg',
-            ghost: 'bg-transparent text-text hover:bg-text/10 focus-visible:ring-text/40 focus-visible:ring-offset-bg',
+                'border border-teal-300/70 bg-teal-400/10 text-teal-200 hover:border-teal-200 hover:bg-teal-300/20 hover:text-teal-100 focus-visible:ring-teal-300/70 focus-visible:ring-offset-bg',
+            ghost: 'bg-transparent text-teal-200 hover:bg-teal-300/15 hover:text-teal-100 focus-visible:ring-teal-300/60 focus-visible:ring-offset-bg',
         },
         size: {
             sm: 'h-8 px-3 text-sm',

@@ -134,7 +134,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
 
     return (
         <section className="space-y-4">
-            <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-center gap-12">
+            <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-12">
                 <H1 startIcon={ListBulletsIcon}>Moja kupka</H1>
                 <LibraryGameSearch
                     className="w-full"

@@ -26,7 +26,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                         }}
                     >
                         <span className="h-6 w-0.5 bg-current opacity-0 transition-opacity duration-300" />
-                        Kupka
+                        Moja kupka
                     </Link>
                     <Link
                         to="/games"

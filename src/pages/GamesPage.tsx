@@ -1,9 +1,10 @@
-import { PlusIcon } from '@phosphor-icons/react'
+import { ListBulletsIcon, PlusIcon } from '@phosphor-icons/react'
 import { useQuery } from 'convex/react'
 import { useConvexAuth } from 'convex/react'
 import { useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
+import { H1 } from '~/components/H1'
 import { AddGameForm } from '~/features/AddGameForm'
 import { GamesList } from '~/features/GamesList'
 import { api } from '../../convex/_generated/api'
@@ -15,18 +16,21 @@ export const GamesPage = () => {
 
     return (
         <>
-            {canManageGames ? (
-                <div className="mb-6">
-                    <Button
-                        type="button"
-                        startIcon={PlusIcon}
-                        startIconWeight="bold"
-                        onClick={() => setIsAddDrawerOpen(true)}
-                    >
-                        Dodaj grę
-                    </Button>
-                </div>
-            ) : null}
+            <div className="mb-6 grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-12">
+                <H1 startIcon={ListBulletsIcon}>Gry</H1>
+                {canManageGames ? (
+                    <div className="justify-self-end">
+                        <Button
+                            type="button"
+                            startIcon={PlusIcon}
+                            startIconWeight="bold"
+                            onClick={() => setIsAddDrawerOpen(true)}
+                        >
+                            Dodaj grę
+                        </Button>
+                    </div>
+                ) : null}
+            </div>
             <GamesList canManageGames={canManageGames} authReady={isAuthenticated} />
             <Drawer
                 isOpen={isAddDrawerOpen}

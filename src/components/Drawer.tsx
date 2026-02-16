@@ -1,6 +1,6 @@
 import { XIcon } from '@phosphor-icons/react'
 import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 'react'
-import { H1 } from './H1'
+import { H2 } from './H2'
 
 type IconWeight = 'thin' | 'light' | 'regular' | 'bold' | 'fill' | 'duotone'
 type IconComponent = ComponentType<{ className?: string; weight?: IconWeight }>
@@ -86,9 +86,9 @@ export const Drawer = ({
                 <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_2%_6%,rgba(94,234,212,0.08)_0%,rgba(94,234,212,0.03)_24%,rgba(12,2,23,0)_52%)]" />
 
                 <div className="relative z-10 mb-6 flex items-center justify-between gap-4">
-                    <H1 startIcon={titleStartIcon} startIconWeight={titleStartIconWeight}>
+                    <H2 startIcon={titleStartIcon} startIconWeight={titleStartIconWeight}>
                         {title}
-                    </H1>
+                    </H2>
                     <button
                         ref={closeButtonRef}
                         type="button"

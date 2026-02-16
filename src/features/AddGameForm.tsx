@@ -1,5 +1,5 @@
 import { PlusIcon } from '@phosphor-icons/react'
-import { useMutation } from 'convex/react'
+import { useAction, useMutation } from 'convex/react'
 import { ConvexError } from 'convex/values'
 import { useState } from 'react'
 import type { IgdbGame } from '~/api/IgdbGame'
@@ -31,8 +31,23 @@ export const gameFormErrorMessages: Record<string, string> = {
     RELEASE_YEAR_INVALID: 'Podany rok wydania jest niepoprawny.',
     GAME_TITLE_YEAR_ALREADY_EXISTS: 'Gra o tym tytule i roku już istnieje.',
     GAME_NOT_FOUND: 'Nie znaleziono gry.',
+    COVER_URL_INVALID: 'Podaj poprawny URL okładki (http/https).',
+    COVER_FETCH_FAILED: 'Nie udało się pobrać okładki z podanego URL.',
+    COVER_NOT_IMAGE: 'Podany URL nie wskazuje na obraz.',
+    COVER_TOO_LARGE: 'Okładka jest za duża (maks. 8 MB).',
     FORBIDDEN: 'Brak uprawnień do zarządzania grami.',
     UNAUTHORIZED: 'Musisz być zalogowany.',
+}
+
+const CONVEX_STORAGE_PATH_SEGMENT = '/api/storage/'
+
+const isConvexStorageUrl = (value: string) => {
+    try {
+        const parsed = new URL(value)
+        return parsed.pathname.includes(CONVEX_STORAGE_PATH_SEGMENT)
+    } catch {
+        return false
+    }
 }
 
 type Props = {
@@ -42,6 +57,7 @@ type Props = {
 
 export const AddGameForm = ({ canManageGames, onDone }: Props) => {
     const createGame = useMutation(api.games.create)
+    const uploadCoverFromUrl = useAction(api.games.uploadCoverFromUrl)
     const { success, error: showError } = useToast()
 
     const [title, setTitle] = useState('')
@@ -52,10 +68,19 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
         event.preventDefault()
 
         try {
+            let normalizedCoverImageUrl: string | undefined
+            const trimmedCoverImageUrl = coverImageUrl.trim()
+
+            if (trimmedCoverImageUrl.length > 0) {
+                normalizedCoverImageUrl = isConvexStorageUrl(trimmedCoverImageUrl)
+                    ? trimmedCoverImageUrl
+                    : await uploadCoverFromUrl({ sourceUrl: trimmedCoverImageUrl })
+            }
+
             await createGame({
                 title,
                 releaseYear: releaseYear === '' ? Number.NaN : releaseYear,
-                coverImageUrl: coverImageUrl.length > 0 ? coverImageUrl : undefined,
+                coverImageUrl: normalizedCoverImageUrl,
             })
 
             setTitle('')

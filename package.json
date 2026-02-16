@@ -16,28 +16,28 @@
         "fix": "bun run lint:fix && bun run format:fix"
     },
     "dependencies": {
-        "@clerk/clerk-react": "^5.60.0",
+        "@clerk/clerk-react": "^5.60.1",
         "@phosphor-icons/react": "^2.1.10",
-        "@tanstack/react-query": "^5.90.5",
-        "@tanstack/react-router": "^1.159.5",
+        "@tanstack/react-query": "^5.90.21",
+        "@tanstack/react-router": "^1.160.0",
         "bun-plugin-tailwind": "^0.1.2",
         "clsx": "^2.1.1",
         "convex": "^1.31.7",
         "cva": "^1.0.0-beta.4",
-        "react": "^19",
-        "react-dom": "^19",
-        "react-error-boundary": "^6.0.0",
-        "tailwind-merge": "^3.3.1",
-        "tailwindcss": "^4.1.11"
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4",
+        "react-error-boundary": "^6.1.1",
+        "tailwind-merge": "^3.4.1",
+        "tailwindcss": "^4.1.18"
     },
     "devDependencies": {
-        "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+        "@trivago/prettier-plugin-sort-imports": "^6.0.2",
         "@types/bun": "latest",
-        "@types/react": "^19",
-        "@types/react-dom": "^19",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
         "husky": "^9.1.7",
-        "oxlint": "^1.25.0",
-        "prettier": "^3.6.2",
-        "prettier-plugin-tailwindcss": "^0.7.1"
+        "oxlint": "^1.48.0",
+        "prettier": "^3.8.1",
+        "prettier-plugin-tailwindcss": "^0.7.2"
     }
 }

@@ -8,22 +8,22 @@ export const listGamesPage = async (
         numItems: number
     },
 ) => {
-    return await ctx.db.query('games').paginate(paginationOpts)
+    return await ctx.db.query('games').order('desc').paginate(paginationOpts)
 }
 
 export const listGames = async (ctx: QueryCtx) => {
-    return await ctx.db.query('games').collect()
+    return await ctx.db.query('games').order('desc').collect()
 }
 
-export const findGameByTitleYear = async (
+export const findGameByTitleDate = async (
     ctx: MutationCtx,
     titleNormalized: string,
-    releaseYear: number,
+    releaseDate: string,
 ) => {
     return await ctx.db
         .query('games')
-        .withIndex('by_titleYear', (q) =>
-            q.eq('titleNormalized', titleNormalized).eq('releaseYear', releaseYear),
+        .withIndex('by_titleDate', (q) =>
+            q.eq('titleNormalized', titleNormalized).eq('releaseDate', releaseDate),
         )
         .unique()
 }
@@ -33,7 +33,7 @@ export const createGame = async (
     values: {
         title: string
         titleNormalized: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     },
 ) => {
@@ -50,7 +50,7 @@ export const updateGame = async (
     values: {
         title: string
         titleNormalized: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     },
 ) => {
@@ -72,7 +72,7 @@ export const syncLibrarySnapshotsForGame = async (
     gameId: Id<'games'>,
     values: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     },
 ) => {
@@ -82,7 +82,7 @@ export const syncLibrarySnapshotsForGame = async (
         linkedEntries.map((entry) =>
             ctx.db.patch(entry._id, {
                 gameTitle: values.title,
-                gameReleaseYear: values.releaseYear,
+                gameReleaseDate: values.releaseDate,
                 gameCoverImageUrl: values.coverImageUrl,
             }),
         ),

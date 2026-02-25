@@ -51,12 +51,18 @@ export const deleteLibraryEntry = async (
 const withGameSnapshot = async (ctx: QueryCtx, entries: Array<LibraryEntryDoc>) =>
     Promise.all(
         entries.map(async (entry) => {
-            if (entry.gameTitle !== undefined && entry.gameReleaseYear !== undefined) {
+            const snapshotReleaseDate =
+                entry.gameReleaseDate ??
+                (entry.gameReleaseYear !== undefined
+                    ? `${entry.gameReleaseYear}-01-01`
+                    : undefined)
+
+            if (entry.gameTitle !== undefined && snapshotReleaseDate !== undefined) {
                 return {
                     ...entry,
                     game: {
                         title: entry.gameTitle,
-                        releaseYear: entry.gameReleaseYear,
+                        releaseDate: snapshotReleaseDate,
                         coverImageUrl: entry.gameCoverImageUrl,
                     },
                 }
@@ -74,7 +80,11 @@ const withGameSnapshot = async (ctx: QueryCtx, entries: Array<LibraryEntryDoc>) 
                 ...entry,
                 game: {
                     title: game.title,
-                    releaseYear: game.releaseYear,
+                    releaseDate:
+                        game.releaseDate ??
+                        (game.releaseYear !== undefined
+                            ? `${game.releaseYear}-01-01`
+                            : ''),
                     coverImageUrl: game.coverImageUrl,
                 },
             }
@@ -89,6 +99,7 @@ const listLibraryEntriesPageByUser = async (
     return await ctx.db
         .query('libraryEntries')
         .withIndex('by_user', (q) => q.eq('userId', userId))
+        .order('desc')
         .paginate(paginationOpts)
 }
 
@@ -120,6 +131,7 @@ export const listFilteredLibraryPageWithGameSnapshotByUser = async (
             .withIndex('by_user_progress', (q) =>
                 q.eq('userId', userId).eq('progressStatus', filters.progressStatus!),
             )
+            .order('desc')
             .paginate(paginationOpts)
     } else if (filters.wantsToPlayMin > 0) {
         result = await ctx.db
@@ -127,6 +139,7 @@ export const listFilteredLibraryPageWithGameSnapshotByUser = async (
             .withIndex('by_user_wantsToPlay', (q) =>
                 q.eq('userId', userId).gte('wantsToPlay', filters.wantsToPlayMin),
             )
+            .order('desc')
             .paginate(paginationOpts)
     } else {
         result = await listLibraryEntriesPageByUser(ctx, userId, paginationOpts)

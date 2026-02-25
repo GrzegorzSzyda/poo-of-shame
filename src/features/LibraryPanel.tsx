@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
 import { H1 } from '~/components/H1'
 import { useToast } from '~/components/Toast'
+import { formatIsoDatePl } from '~/utils/date'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 import { LibraryEditDrawer } from './LibraryEditDrawer'
@@ -31,13 +32,14 @@ import {
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
     gameId: Id<'games'>
+    note?: string
     platforms: ReadonlyArray<Platform>
     rating: number
     wantsToPlay: number
     progressStatus: ProgressStatus
     game: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     } | null
 }
@@ -45,7 +47,8 @@ type LibraryEntry = {
 type GameSearchItem = {
     _id: Id<'games'>
     title: string
-    releaseYear: number
+    releaseDate?: string
+    releaseYear?: number
     coverImageUrl?: string
 }
 
@@ -68,6 +71,9 @@ const statusIcon = (status: ProgressStatus) => {
     }
 }
 
+const toDisplayReleaseDate = (releaseDate?: string, releaseYear?: number) =>
+    releaseDate ?? (releaseYear !== undefined ? `${releaseYear}-01-01` : 'brak daty')
+
 export const LibraryPanel = ({ authReady }: Props) => {
     const { success, error: showError } = useToast()
     const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
@@ -87,7 +93,8 @@ export const LibraryPanel = ({ authReady }: Props) => {
     const gamesById = useMemo(() => {
         const map = new Map<string, string>()
         games?.forEach((game) => {
-            map.set(game._id, `${game.title} (${game.releaseYear})`)
+            const releaseDate = toDisplayReleaseDate(game.releaseDate, game.releaseYear)
+            map.set(game._id, `${game.title} (${formatIsoDatePl(releaseDate)})`)
         })
         return map
     }, [games])
@@ -103,6 +110,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
         try {
             const entryId = await addToLibrary({
                 gameId: game._id,
+                note: '',
                 platforms: [],
                 rating: 50,
                 wantsToPlay: 50,
@@ -112,13 +120,14 @@ export const LibraryPanel = ({ authReady }: Props) => {
             setEditingEntry({
                 _id: entryId,
                 gameId: game._id,
+                note: '',
                 platforms: [],
                 rating: 50,
                 wantsToPlay: 50,
                 progressStatus: 'backlog',
                 game: {
                     title: game.title,
-                    releaseYear: game.releaseYear,
+                    releaseDate: toDisplayReleaseDate(game.releaseDate, game.releaseYear),
                     coverImageUrl: game.coverImageUrl,
                 },
             })
@@ -161,7 +170,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                             const entryTitle = entry.game
                                 ? entry.game.title
                                 : (gamesById.get(entry.gameId) ?? 'Brak danych')
-                            const entryYear = entry.game?.releaseYear
+                            const entryDate = entry.game?.releaseDate
                             const ratingOnTen = (
                                 Math.round((entry.rating / 10) * 10) / 10
                             ).toFixed(entry.rating % 10 === 0 ? 0 : 1)
@@ -196,7 +205,9 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                                         {entryTitle}
                                                     </span>
                                                     <span className="text-text/70 text-sm">
-                                                        ({entryYear ?? 'brak roku'})
+                                                        (
+                                                        {formatIsoDatePl(entryDate ?? '')}
+                                                        )
                                                     </span>
                                                 </span>
                                                 <span
@@ -240,6 +251,11 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                                     </span>
                                                 )}
                                             </div>
+                                            {entry.note ? (
+                                                <p className="text-text/85 mt-3 text-sm break-words whitespace-pre-wrap">
+                                                    {entry.note}
+                                                </p>
+                                            ) : null}
                                         </div>
 
                                         <div className="flex gap-2">

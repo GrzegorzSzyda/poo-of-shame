@@ -3,12 +3,14 @@ import { cx } from 'cva'
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '~/components/Button'
 import { Input } from '~/components/Input'
+import { formatIsoDatePl } from '~/utils/date'
 import type { Id } from '../../convex/_generated/dataModel'
 
 type GameItem = {
     _id: Id<'games'>
     title: string
-    releaseYear: number
+    releaseDate?: string
+    releaseYear?: number
     coverImageUrl?: string
 }
 
@@ -19,6 +21,10 @@ type Props = {
     onAdd: (game: GameItem) => void
     className?: string
 }
+
+const toDisplayReleaseDate = (game: GameItem) =>
+    game.releaseDate ??
+    (game.releaseYear !== undefined ? `${game.releaseYear}-01-01` : '')
 
 export const LibraryGameSearch = ({
     games,
@@ -244,7 +250,7 @@ export const LibraryGameSearch = ({
                                             {game.title}
                                         </div>
                                         <div className="text-text/70 text-sm">
-                                            {game.releaseYear}
+                                            {formatIsoDatePl(toDisplayReleaseDate(game))}
                                         </div>
                                     </div>
                                     <Button

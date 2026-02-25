@@ -1,9 +1,4 @@
-import {
-    CheckCircleIcon,
-    InfoIcon,
-    WarningCircleIcon,
-    XIcon,
-} from '@phosphor-icons/react'
+import { CheckCircleIcon, InfoIcon, WarningCircleIcon } from '@phosphor-icons/react'
 import {
     createContext,
     useCallback,
@@ -13,7 +8,6 @@ import {
     useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import { Button } from './Button'
 
 type ToastTone = 'success' | 'error' | 'info'
 
@@ -130,16 +124,15 @@ export const ToastProvider = ({ children }: ToastProviderProps) => {
                                         </p>
                                     ) : null}
                                 </div>
-                                <Button
+                                <button
                                     type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0 text-current hover:bg-white/10"
+                                    className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-current transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:outline-none"
+                                    aria-label="Zamknij komunikat"
                                     title="Zamknij komunikat"
                                     onClick={() => removeToast(toast.id)}
                                 >
-                                    <XIcon className="h-3.5 w-3.5" weight="bold" />
-                                </Button>
+                                    <span className="text-base leading-none">×</span>
+                                </button>
                             </div>
                         </div>
                     )

@@ -13,9 +13,9 @@ import { api } from '../../convex/_generated/api'
 
 export const gameFormErrorMessages = {
     TITLE_REQUIRED: 'Podaj tytuł gry.',
-    RELEASE_YEAR_REQUIRED: 'Podaj rok wydania.',
-    RELEASE_YEAR_INVALID: 'Podany rok wydania jest niepoprawny.',
-    GAME_TITLE_YEAR_ALREADY_EXISTS: 'Gra o tym tytule i roku już istnieje.',
+    RELEASE_DATE_REQUIRED: 'Podaj datę premiery.',
+    RELEASE_DATE_INVALID: 'Podana data premiery jest niepoprawna.',
+    GAME_TITLE_DATE_ALREADY_EXISTS: 'Gra o tym tytule i dacie już istnieje.',
     GAME_NOT_FOUND: 'Nie znaleziono gry.',
     COVER_URL_INVALID: 'Podaj poprawny URL okładki (http/https).',
     COVER_FETCH_FAILED: 'Nie udało się pobrać okładki z podanego URL.',
@@ -40,7 +40,7 @@ type ErrorCode = keyof typeof gameFormErrorMessages | 'UNKNOWN_ERROR'
 
 type Values = {
     title: string
-    releaseYear: number | ''
+    releaseDate: string
     coverImageUrl: string
 }
 
@@ -49,7 +49,7 @@ type Props = {
     submitLabel: string
     onSubmit: (values: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     }) => Promise<void>
 }
@@ -58,24 +58,21 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
     const { error: showError } = useToast()
     const uploadCoverFromUrl = useAction(api.games.uploadCoverFromUrl)
     const [title, setTitle] = useState(initialValues?.title ?? '')
-    const [releaseYear, setReleaseYear] = useState<number | ''>(
-        initialValues?.releaseYear ?? '',
-    )
+    const [releaseDate, setReleaseDate] = useState(initialValues?.releaseDate ?? '')
     const [coverImageUrl, setCoverImageUrl] = useState(initialValues?.coverImageUrl ?? '')
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault()
 
         try {
-            if (releaseYear === '') {
-                // Backend zwróci RELEASE_YEAR_INVALID dla NaN.
-                await onSubmit({ title, releaseYear: NaN })
+            if (releaseDate === '') {
+                await onSubmit({ title, releaseDate: '' })
                 return
             }
 
             await onSubmit({
                 title,
-                releaseYear,
+                releaseDate,
                 coverImageUrl:
                     coverImageUrl.trim().length === 0
                         ? undefined
@@ -114,17 +111,12 @@ export const GameForm = ({ initialValues, submitLabel, onSubmit }: Props) => {
             </div>
 
             <div>
-                <FormLabel htmlFor="game-form-release-year">Rok wydania</FormLabel>
+                <FormLabel htmlFor="game-form-release-date">Data premiery</FormLabel>
                 <Input
-                    id="game-form-release-year"
-                    type="number"
-                    placeholder="2017"
-                    value={releaseYear}
-                    onChange={(e) =>
-                        setReleaseYear(
-                            e.target.value === '' ? '' : Number(e.target.value),
-                        )
-                    }
+                    id="game-form-release-date"
+                    type="date"
+                    value={releaseDate}
+                    onChange={(e) => setReleaseDate(e.target.value)}
                 />
             </div>
 

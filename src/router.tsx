@@ -6,6 +6,8 @@ import {
 } from '@tanstack/react-router'
 import { ErrorView } from './layout/ErrorView'
 import { ProtectedPage } from './layout/ProtectedPage'
+import { CheatsBulkImportPage } from './pages/CheatsBulkImportPage'
+import { CheatsDataEnrichmentPage } from './pages/CheatsDataEnrichmentPage'
 import { CheatsPage } from './pages/CheatsPage'
 import { GamesPage } from './pages/GamesPage'
 import { HomePage } from './pages/HomePage'
@@ -58,11 +60,33 @@ const cheatsRoute = createRoute({
     ),
 })
 
+const cheatsDataEnrichmentRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/cheats/data-enrichment',
+    component: () => (
+        <ProtectedPage>
+            <CheatsDataEnrichmentPage />
+        </ProtectedPage>
+    ),
+})
+
+const cheatsBulkImportRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/cheats/bulk-import',
+    component: () => (
+        <ProtectedPage>
+            <CheatsBulkImportPage />
+        </ProtectedPage>
+    ),
+})
+
 const routeTree = rootRoute.addChildren([
     homeRoute,
     gamesRoute,
     libraryRoute,
     cheatsRoute,
+    cheatsDataEnrichmentRoute,
+    cheatsBulkImportRoute,
 ])
 
 export const router = createRouter({ routeTree })

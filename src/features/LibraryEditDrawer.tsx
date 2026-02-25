@@ -18,13 +18,14 @@ import {
 type EditableEntry = {
     _id: Id<'libraryEntries'>
     gameId: Id<'games'>
+    note?: string
     platforms: ReadonlyArray<Platform>
     rating: number
     wantsToPlay: number
     progressStatus: ProgressStatus
     game: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     } | null
 }
@@ -47,12 +48,14 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
     }
 
     const handleSubmit = async ({
+        note,
         platforms,
         rating,
         wantsToPlay,
         progressStatus,
     }: {
         gameId: string
+        note: string
         platforms: Platform[]
         rating: number
         wantsToPlay: number
@@ -63,6 +66,7 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
         try {
             await updateLibraryEntry({
                 entryId: entry._id,
+                note,
                 platforms,
                 rating,
                 wantsToPlay,
@@ -103,6 +107,7 @@ export const LibraryEditDrawer = ({ isOpen, onClose, entry }: Props) => {
                     <LibraryEntryForm
                         initialValues={{
                             gameId: entry.gameId,
+                            note: entry.note ?? '',
                             platforms: [...entry.platforms],
                             rating: entry.rating,
                             wantsToPlay: entry.wantsToPlay,

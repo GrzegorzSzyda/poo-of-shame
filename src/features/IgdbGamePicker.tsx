@@ -5,6 +5,7 @@ import { Box } from '~/components/Box'
 import { FormLabel } from '~/components/FormLabel'
 import { Input } from '~/components/Input'
 import { Waiter } from '~/components/Waiter'
+import { formatIsoDatePl } from '~/utils/date'
 
 type Props = {
     onPick: (game: IgdbGame) => void
@@ -19,9 +20,11 @@ const buildIgdbSearchQuery = (searchText: string) => {
     ].join(' ')
 }
 
-const toReleaseYear = (firstReleaseDate?: number) => {
+const toReleaseDate = (firstReleaseDate?: number) => {
     if (!firstReleaseDate) return 'brak daty'
-    return new Date(firstReleaseDate * 1000).getFullYear().toString()
+    const date = new Date(firstReleaseDate * 1000)
+    if (Number.isNaN(date.getTime())) return 'brak daty'
+    return formatIsoDatePl(date.toISOString().slice(0, 10))
 }
 
 const toCoverUrl = (imageId?: string) => {
@@ -72,7 +75,7 @@ const IgdbResults = ({
                         <div>
                             <div className="text-text font-medium">{game.name}</div>
                             <div className="text-text/70 text-sm">
-                                {toReleaseYear(game.first_release_date)}
+                                {toReleaseDate(game.first_release_date)}
                             </div>
                         </div>
                         <span className="text-text/55 ml-auto text-xs">
@@ -99,7 +102,7 @@ export const IgdbGamePicker = ({ onPick }: Props) => {
             <FormLabel htmlFor="igdb-search">
                 Szukaj w IGDB
                 <span className="text-text/65 ml-2 text-xs">
-                    (uzupełnia tytuł, rok i okładkę)
+                    (uzupełnia tytuł, datę premiery i okładkę)
                 </span>
             </FormLabel>
             <Input

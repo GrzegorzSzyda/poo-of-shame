@@ -12,7 +12,7 @@ type DeletableEntry = {
     _id: Id<'libraryEntries'>
     game: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     } | null
 }

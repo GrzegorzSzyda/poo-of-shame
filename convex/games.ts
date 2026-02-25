@@ -4,8 +4,8 @@ import { action, mutation, query } from './_generated/server'
 import { ERRORS } from './common/errors'
 import {
     assertTitleRequired,
-    assertUniqueGameTitleYear,
-    assertValidReleaseYear,
+    assertUniqueGameTitleDate,
+    assertValidReleaseDate,
     normalizeGameTitle,
     requireGame,
 } from './domain/games'
@@ -17,7 +17,7 @@ import {
 import {
     createGame,
     deleteGameWithLinkedLibraryEntries,
-    findGameByTitleYear,
+    findGameByTitleDate,
     getGameById,
     listGames,
     listGamesPage,
@@ -85,25 +85,25 @@ export const listAll = query({
 export const create = mutation({
     args: {
         title: v.string(),
-        releaseYear: v.number(),
+        releaseDate: v.string(),
         coverImageUrl: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { coverImageUrl, releaseYear, title } = args
+        const { coverImageUrl, releaseDate, title } = args
 
         await ensureCanManageGames(ctx)
 
         const titleNormalized = normalizeGameTitle(title)
         assertTitleRequired(titleNormalized)
-        assertValidReleaseYear(releaseYear)
+        assertValidReleaseDate(releaseDate)
 
-        const existing = await findGameByTitleYear(ctx, titleNormalized, releaseYear)
-        assertUniqueGameTitleYear(existing)
+        const existing = await findGameByTitleDate(ctx, titleNormalized, releaseDate)
+        assertUniqueGameTitleDate(existing)
 
         return await createGame(ctx, {
             title: title.trim(),
             titleNormalized,
-            releaseYear,
+            releaseDate,
             coverImageUrl,
         })
     },
@@ -113,11 +113,11 @@ export const update = mutation({
     args: {
         gameId: v.id('games'),
         title: v.string(),
-        releaseYear: v.number(),
+        releaseDate: v.string(),
         coverImageUrl: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
-        const { coverImageUrl, gameId, releaseYear, title } = args
+        const { coverImageUrl, gameId, releaseDate, title } = args
 
         await ensureCanManageGames(ctx)
 
@@ -125,23 +125,23 @@ export const update = mutation({
 
         const titleNormalized = normalizeGameTitle(title)
         assertTitleRequired(titleNormalized)
-        assertValidReleaseYear(releaseYear)
+        assertValidReleaseDate(releaseDate)
 
-        const existing = await findGameByTitleYear(ctx, titleNormalized, releaseYear)
-        assertUniqueGameTitleYear(existing, gameId)
+        const existing = await findGameByTitleDate(ctx, titleNormalized, releaseDate)
+        assertUniqueGameTitleDate(existing, gameId)
 
         const trimmedTitle = title.trim()
 
         await updateGame(ctx, gameId, {
             title: trimmedTitle,
             titleNormalized,
-            releaseYear,
+            releaseDate,
             coverImageUrl,
         })
 
         await syncLibrarySnapshotsForGame(ctx, gameId, {
             title: trimmedTitle,
-            releaseYear,
+            releaseDate,
             coverImageUrl,
         })
     },
@@ -212,5 +212,70 @@ export const uploadCoverFromUrl = action({
         }
 
         return storageUrl
+    },
+})
+
+export const bulkUpsertGames = mutation({
+    args: {
+        items: v.array(
+            v.object({
+                title: v.string(),
+                releaseDate: v.string(),
+                coverImageUrl: v.string(),
+            }),
+        ),
+    },
+    handler: async (ctx, args) => {
+        await ensureCanManageGames(ctx)
+
+        let created = 0
+        let updated = 0
+
+        for (const item of args.items) {
+            const titleNormalized = normalizeGameTitle(item.title)
+            assertTitleRequired(titleNormalized)
+            assertValidReleaseDate(item.releaseDate)
+
+            const trimmedTitle = item.title.trim()
+            const coverImageUrl = item.coverImageUrl.trim()
+
+            const existing = await findGameByTitleDate(
+                ctx,
+                titleNormalized,
+                item.releaseDate,
+            )
+
+            if (!existing) {
+                await createGame(ctx, {
+                    title: trimmedTitle,
+                    titleNormalized,
+                    releaseDate: item.releaseDate,
+                    coverImageUrl,
+                })
+                created += 1
+                continue
+            }
+
+            await updateGame(ctx, existing._id, {
+                title: trimmedTitle,
+                titleNormalized,
+                releaseDate: item.releaseDate,
+                coverImageUrl,
+            })
+
+            await syncLibrarySnapshotsForGame(ctx, existing._id, {
+                title: trimmedTitle,
+                releaseDate: item.releaseDate,
+                coverImageUrl,
+            })
+
+            updated += 1
+        }
+
+        return {
+            total: args.items.length,
+            created,
+            updated,
+        }
     },
 })

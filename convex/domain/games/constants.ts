@@ -1,3 +1,3 @@
-export const MIN_RELEASE_YEAR = 1957
+export const MIN_RELEASE_DATE = '1957-01-01'
 
-export const getMaxReleaseYear = () => new Date().getFullYear() + 1
+export const getMaxReleaseDate = () => `${new Date().getFullYear() + 1}-12-31`

@@ -62,13 +62,14 @@ export const listMyLibraryFiltered = query({
 export const addToLibrary = mutation({
     args: {
         gameId: v.id('games'),
+        note: v.string(),
         platforms: v.array(platformValidator),
         rating: v.number(),
         wantsToPlay: v.number(),
         progressStatus: progressStatusValidator,
     },
     handler: async (ctx, args) => {
-        const { gameId, progressStatus, rating, wantsToPlay } = args
+        const { gameId, note, progressStatus, rating, wantsToPlay } = args
 
         const userId = await ensureAuthUserId(ctx)
 
@@ -87,8 +88,13 @@ export const addToLibrary = mutation({
             userId,
             gameId,
             gameTitle: game.title,
-            gameReleaseYear: game.releaseYear,
+            gameReleaseDate:
+                game.releaseDate ??
+                (game.releaseYear !== undefined
+                    ? `${game.releaseYear}-01-01`
+                    : undefined),
             gameCoverImageUrl: game.coverImageUrl,
+            note,
             platforms,
             rating,
             wantsToPlay,
@@ -102,13 +108,14 @@ export const addToLibrary = mutation({
 export const updateLibraryEntry = mutation({
     args: {
         entryId: v.id('libraryEntries'),
+        note: v.string(),
         platforms: v.array(platformValidator),
         rating: v.number(),
         wantsToPlay: v.number(),
         progressStatus: progressStatusValidator,
     },
     handler: async (ctx, args) => {
-        const { entryId, progressStatus, rating, wantsToPlay } = args
+        const { entryId, note, progressStatus, rating, wantsToPlay } = args
 
         const userId = await ensureAuthUserId(ctx)
 
@@ -120,6 +127,7 @@ export const updateLibraryEntry = mutation({
         const platforms = normalizeLibraryPlatforms(args.platforms)
 
         await patchLibraryEntry(ctx, entryId, {
+            note,
             platforms,
             rating,
             wantsToPlay,

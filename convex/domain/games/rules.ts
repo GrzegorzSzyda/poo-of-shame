@@ -1,6 +1,6 @@
 import { ConvexError } from 'convex/values'
 import { ERRORS } from '../../common/errors'
-import { getMaxReleaseYear, MIN_RELEASE_YEAR } from './constants'
+import { getMaxReleaseDate, MIN_RELEASE_DATE } from './constants'
 import type { GameDoc, GameId } from './types'
 
 export const normalizeGameTitle = (title: string) =>
@@ -12,15 +12,22 @@ export const assertTitleRequired = (normalizedTitle: string) => {
     }
 }
 
-export const assertValidReleaseYear = (year: number) => {
-    if (!Number.isFinite(year) || !Number.isInteger(year)) {
-        throw new ConvexError(ERRORS.RELEASE_YEAR_INVALID)
+const isValidIsoDate = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+    const parsed = new Date(`${value}T00:00:00.000Z`)
+    if (Number.isNaN(parsed.getTime())) return false
+    return parsed.toISOString().slice(0, 10) === value
+}
+
+export const assertValidReleaseDate = (releaseDate: string) => {
+    if (!isValidIsoDate(releaseDate)) {
+        throw new ConvexError(ERRORS.RELEASE_DATE_INVALID)
     }
-    if (year < MIN_RELEASE_YEAR) {
-        throw new ConvexError(ERRORS.RELEASE_YEAR_INVALID)
+    if (releaseDate < MIN_RELEASE_DATE) {
+        throw new ConvexError(ERRORS.RELEASE_DATE_INVALID)
     }
-    if (year > getMaxReleaseYear()) {
-        throw new ConvexError(ERRORS.RELEASE_YEAR_INVALID)
+    if (releaseDate > getMaxReleaseDate()) {
+        throw new ConvexError(ERRORS.RELEASE_DATE_INVALID)
     }
 }
 
@@ -31,9 +38,9 @@ export const requireGame = (game: GameDoc | null): GameDoc => {
     return game
 }
 
-export const assertUniqueGameTitleYear = (existing: GameDoc | null, gameId?: GameId) => {
+export const assertUniqueGameTitleDate = (existing: GameDoc | null, gameId?: GameId) => {
     if (!existing) return
     if (!gameId || existing._id !== gameId) {
-        throw new ConvexError(ERRORS.GAME_TITLE_YEAR_ALREADY_EXISTS)
+        throw new ConvexError(ERRORS.GAME_TITLE_DATE_ALREADY_EXISTS)
     }
 }

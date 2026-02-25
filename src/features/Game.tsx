@@ -7,6 +7,7 @@ import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
 import { useToast } from '~/components/Toast'
+import { formatIsoDatePl } from '~/utils/date'
 import { api } from '../../convex/_generated/api'
 import { type Doc, type Id } from '../../convex/_generated/dataModel'
 import { EditGameForm } from './EditGameForm'
@@ -20,13 +21,14 @@ import {
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
     gameId: Id<'games'>
+    note?: string
     platforms: ReadonlyArray<Platform>
     rating: number
     wantsToPlay: number
     progressStatus: ProgressStatus
     game: {
         title: string
-        releaseYear: number
+        releaseDate: string
         coverImageUrl?: string
     } | null
 }
@@ -41,6 +43,9 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
     const removeGame = useMutation(api.games.remove)
     const addToLibrary = useMutation(api.library.addToLibrary)
     const { success, error: showError } = useToast()
+    const displayReleaseDate =
+        game.releaseDate ??
+        (game.releaseYear !== undefined ? `${game.releaseYear}-01-01` : '')
 
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -50,6 +55,7 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
         try {
             await addToLibrary({
                 gameId: game._id,
+                note: '',
                 platforms: ['steam'],
                 rating: 50,
                 wantsToPlay: 50,
@@ -112,7 +118,9 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
 
                 <div className="min-w-0 flex-1">
                     <div className="text-text -mt-2 truncate">{game.title}</div>
-                    <div className="text-text/70 text-sm">{game.releaseYear}</div>
+                    <div className="text-text/70 text-sm">
+                        {formatIsoDatePl(displayReleaseDate)}
+                    </div>
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-2">

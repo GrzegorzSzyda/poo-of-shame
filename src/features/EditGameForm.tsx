@@ -12,20 +12,23 @@ type Props = {
 export const EditGameForm = ({ game, onDone }: Props) => {
     const updateGame = useMutation(api.games.update)
     const { success } = useToast()
+    const initialReleaseDate =
+        game.releaseDate ??
+        (game.releaseYear !== undefined ? `${game.releaseYear}-01-01` : '')
 
     return (
         <GameForm
             submitLabel="Zapisz zmiany"
             initialValues={{
                 title: game.title,
-                releaseYear: game.releaseYear,
+                releaseDate: initialReleaseDate,
                 coverImageUrl: game.coverImageUrl ?? '',
             }}
             onSubmit={async (values) => {
                 await updateGame({
                     gameId: game._id,
                     title: values.title,
-                    releaseYear: values.releaseYear,
+                    releaseDate: values.releaseDate,
                     coverImageUrl: values.coverImageUrl,
                 })
                 success('Zapisano zmiany gry.')

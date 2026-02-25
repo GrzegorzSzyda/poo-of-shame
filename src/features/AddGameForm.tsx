@@ -14,10 +14,11 @@ import { Waiter } from '~/components/Waiter'
 import { api } from '../../convex/_generated/api'
 import { IgdbGamePicker } from './IgdbGamePicker'
 
-const toReleaseYear = (firstReleaseDate?: number): number | '' => {
+const toReleaseDate = (firstReleaseDate?: number): string => {
     if (!firstReleaseDate) return ''
-    const year = new Date(firstReleaseDate * 1000).getFullYear()
-    return Number.isFinite(year) ? year : ''
+    const date = new Date(firstReleaseDate * 1000)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toISOString().slice(0, 10)
 }
 
 const toCoverUrl = (imageId?: string): string => {
@@ -27,9 +28,9 @@ const toCoverUrl = (imageId?: string): string => {
 
 export const gameFormErrorMessages: Record<string, string> = {
     TITLE_REQUIRED: 'Podaj tytuł gry.',
-    RELEASE_YEAR_REQUIRED: 'Podaj rok wydania.',
-    RELEASE_YEAR_INVALID: 'Podany rok wydania jest niepoprawny.',
-    GAME_TITLE_YEAR_ALREADY_EXISTS: 'Gra o tym tytule i roku już istnieje.',
+    RELEASE_DATE_REQUIRED: 'Podaj datę premiery.',
+    RELEASE_DATE_INVALID: 'Podana data premiery jest niepoprawna.',
+    GAME_TITLE_DATE_ALREADY_EXISTS: 'Gra o tym tytule i dacie już istnieje.',
     GAME_NOT_FOUND: 'Nie znaleziono gry.',
     COVER_URL_INVALID: 'Podaj poprawny URL okładki (http/https).',
     COVER_FETCH_FAILED: 'Nie udało się pobrać okładki z podanego URL.',
@@ -61,7 +62,7 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
     const { success, error: showError } = useToast()
 
     const [title, setTitle] = useState('')
-    const [releaseYear, setReleaseYear] = useState<number | ''>('')
+    const [releaseDate, setReleaseDate] = useState('')
     const [coverImageUrl, setCoverImageUrl] = useState('')
 
     const handleSubmit = async (event: React.FormEvent) => {
@@ -79,12 +80,12 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
 
             await createGame({
                 title,
-                releaseYear: releaseYear === '' ? Number.NaN : releaseYear,
+                releaseDate,
                 coverImageUrl: normalizedCoverImageUrl,
             })
 
             setTitle('')
-            setReleaseYear('')
+            setReleaseDate('')
             setCoverImageUrl('')
             success('Gra została dodana.')
             onDone?.()
@@ -101,7 +102,7 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
 
     const handlePickFromIgdb = (igdbGame: IgdbGame) => {
         setTitle(igdbGame.name)
-        setReleaseYear(toReleaseYear(igdbGame.first_release_date))
+        setReleaseDate(toReleaseDate(igdbGame.first_release_date))
         setCoverImageUrl(toCoverUrl(igdbGame.cover?.image_id))
     }
 
@@ -127,19 +128,12 @@ export const AddGameForm = ({ canManageGames, onDone }: Props) => {
                 </div>
 
                 <div>
-                    <FormLabel htmlFor="game-release-year">Rok wydania</FormLabel>
+                    <FormLabel htmlFor="game-release-date">Data premiery</FormLabel>
                     <Input
-                        id="game-release-year"
-                        type="number"
-                        placeholder="2023"
-                        value={releaseYear}
-                        onChange={(event) =>
-                            setReleaseYear(
-                                event.target.value === ''
-                                    ? ''
-                                    : Number(event.target.value),
-                            )
-                        }
+                        id="game-release-date"
+                        type="date"
+                        value={releaseDate}
+                        onChange={(event) => setReleaseDate(event.target.value)}
                     />
                 </div>
 

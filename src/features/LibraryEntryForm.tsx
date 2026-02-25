@@ -101,6 +101,27 @@ export const LibraryEntryForm = ({
                 </div>
             )}
 
+            <div>
+                <FormLabel htmlFor="library-edit-note">Notatka</FormLabel>
+                <textarea
+                    id="library-edit-note"
+                    value={values.note}
+                    onChange={(event) =>
+                        setValues((current) => ({
+                            ...current,
+                            note: event.target.value,
+                        }))
+                    }
+                    rows={4}
+                    maxLength={2000}
+                    className="placeholder:text-text/45 min-h-24 w-full resize-y rounded-md border border-teal-300/40 bg-black/20 px-3 py-2 text-base text-teal-100 transition-colors outline-none focus:border-teal-400"
+                    placeholder="Dodaj notatkę o tej grze..."
+                />
+                <div className="text-text/60 mt-1 text-right text-xs">
+                    {values.note.length}/2000
+                </div>
+            </div>
+
             <FormActions align="center">
                 <Button type="submit" startIcon={FloppyDiskIcon}>
                     {submitLabel}

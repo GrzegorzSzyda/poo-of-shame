@@ -4,8 +4,10 @@ export const PLATFORM_OPTIONS = [
     'ps_disc',
     'ps_store',
     'ps_plus',
+    'pc_disc',
     'steam',
     'epic',
+    'ea_app',
     'gog',
     'amazon_gaming',
     'ubisoft_connect',
@@ -20,8 +22,10 @@ const PLATFORM_LABELS: Record<Platform, string> = {
     ps_disc: 'PlayStation (płyta)',
     ps_store: 'PlayStation Store',
     ps_plus: 'PlayStation Plus',
+    pc_disc: 'Płyta PC',
     steam: 'Steam',
     epic: 'Epic Games',
+    ea_app: 'EA app',
     gog: 'GOG',
     amazon_gaming: 'Amazon Gaming',
     ubisoft_connect: 'Ubisoft Connect',
@@ -110,6 +114,7 @@ export const progressStatusUsesWantsToPlay = (status: ProgressStatus) =>
 
 export type LibraryEntryDraft = {
     gameId: string
+    note: string
     platforms: Platform[]
     rating: number
     wantsToPlay: number
@@ -118,6 +123,7 @@ export type LibraryEntryDraft = {
 
 export const createDefaultLibraryEntryDraft = (): LibraryEntryDraft => ({
     gameId: '',
+    note: '',
     platforms: [],
     rating: 50,
     wantsToPlay: 50,

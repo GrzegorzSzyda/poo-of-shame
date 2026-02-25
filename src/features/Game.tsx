@@ -36,10 +36,16 @@ type LibraryEntry = {
 type Props = {
     canManageGames: boolean | undefined
     game: Doc<'games'>
+    isLibraryIndexReady: boolean
     libraryEntry?: LibraryEntry
 }
 
-export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
+export const Game = ({
+    canManageGames,
+    game,
+    isLibraryIndexReady,
+    libraryEntry,
+}: Props) => {
     const removeGame = useMutation(api.games.remove)
     const addToLibrary = useMutation(api.library.addToLibrary)
     const { success, error: showError } = useToast()
@@ -133,8 +139,11 @@ export const Game = ({ canManageGames, game, libraryEntry }: Props) => {
                                 startIconWeight="bold"
                                 title="Dodaj do kupki"
                                 onClick={() => void handleAddToLibrary()}
+                                disabled={!isLibraryIndexReady}
                             >
-                                Dodaj do kupki
+                                {isLibraryIndexReady
+                                    ? 'Dodaj do kupki'
+                                    : 'Sprawdzanie kupki...'}
                             </Button>
                         ) : (
                             <>

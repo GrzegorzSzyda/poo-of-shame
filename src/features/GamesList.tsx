@@ -1,5 +1,5 @@
 import { usePaginatedQuery, useQuery } from 'convex/react'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { api } from '../../convex/_generated/api'
 import { Game } from './Game'
 
@@ -10,11 +10,21 @@ type Props = {
 
 export const GamesList = ({ authReady, canManageGames }: Props) => {
     const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
-    const { results: libraryEntries } = usePaginatedQuery(
-        api.library.listMyLibraryFiltered,
-        authReady ? {} : 'skip',
-        { initialNumItems: 100 },
-    )
+    const {
+        results: libraryEntries,
+        status: libraryEntriesStatus,
+        loadMore,
+    } = usePaginatedQuery(api.library.listMyLibraryFiltered, authReady ? {} : 'skip', {
+        initialNumItems: 100,
+    })
+
+    useEffect(() => {
+        if (libraryEntriesStatus === 'CanLoadMore') {
+            loadMore(100)
+        }
+    }, [libraryEntriesStatus, loadMore])
+
+    const isLibraryIndexReady = libraryEntriesStatus === 'Exhausted'
     const libraryEntriesByGameId = useMemo(
         () => new Map(libraryEntries.map((entry) => [entry.gameId, entry])),
         [libraryEntries],
@@ -41,6 +51,7 @@ export const GamesList = ({ authReady, canManageGames }: Props) => {
                         key={game._id}
                         game={game}
                         canManageGames={canManageGames}
+                        isLibraryIndexReady={isLibraryIndexReady}
                         libraryEntry={libraryEntriesByGameId.get(game._id)}
                     />
                 ))}

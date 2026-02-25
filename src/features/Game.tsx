@@ -2,7 +2,7 @@ import { SignedIn } from '@clerk/clerk-react'
 import { PencilSimpleIcon, PlusIcon, TrashIcon } from '@phosphor-icons/react'
 import { useMutation } from 'convex/react'
 import { ConvexError } from 'convex/values'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '~/components/Button'
 import { Drawer } from '~/components/Drawer'
 import { FormActions } from '~/components/FormActions'
@@ -56,21 +56,50 @@ export const Game = ({
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
     const [isLibraryEditOpen, setIsLibraryEditOpen] = useState(false)
+    const [createdLibraryEntry, setCreatedLibraryEntry] = useState<LibraryEntry | null>(
+        null,
+    )
+
+    const editableEntry = libraryEntry ?? createdLibraryEntry
+
+    useEffect(() => {
+        if (libraryEntry) {
+            setCreatedLibraryEntry(null)
+        }
+    }, [libraryEntry])
 
     const handleAddToLibrary = async () => {
         try {
-            await addToLibrary({
+            const entryId = await addToLibrary({
                 gameId: game._id,
                 note: '',
-                platforms: ['steam'],
+                platforms: [],
                 rating: 50,
                 wantsToPlay: 50,
                 progressStatus: 'backlog',
             })
+            setCreatedLibraryEntry({
+                _id: entryId,
+                gameId: game._id,
+                note: '',
+                platforms: [],
+                rating: 50,
+                wantsToPlay: 50,
+                progressStatus: 'backlog',
+                game: {
+                    title: game.title,
+                    releaseDate: displayReleaseDate,
+                    coverImageUrl: game.coverImageUrl,
+                },
+            })
+            setIsLibraryEditOpen(true)
             success('Dodano do kupki.')
         } catch (error) {
             if (error instanceof ConvexError) {
                 const errorCode = String(error.data)
+                if (errorCode === 'LIB_ENTRY_ALREADY_EXISTS' && editableEntry) {
+                    setIsLibraryEditOpen(true)
+                }
                 showError(
                     toLibraryErrorMessage(errorCode) ??
                         'Nie udało się dodać gry do kupki.',
@@ -223,7 +252,7 @@ export const Game = ({
                 <LibraryEditDrawer
                     isOpen={isLibraryEditOpen}
                     onClose={() => setIsLibraryEditOpen(false)}
-                    entry={libraryEntry ?? null}
+                    entry={editableEntry}
                 />
             </SignedIn>
         </li>

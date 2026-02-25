@@ -1,6 +1,7 @@
-import { v } from 'convex/values'
 import { paginationOptsValidator } from 'convex/server'
+import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
+import { ensureAuthUserId } from './common/access'
 import {
     assertLibraryEntryNotExists,
     assertLibraryEntryOwner,
@@ -13,7 +14,6 @@ import {
     requireLibraryEntry,
     requireLibraryGame,
 } from './domain/library'
-import { ensureAuthUserId } from './common/access'
 import {
     deleteLibraryEntry,
     getGameById,
@@ -29,16 +29,31 @@ export const listMyLibrary = query({
     args: { paginationOpts: paginationOptsValidator },
     handler: async (ctx, args) => {
         const userId = await ensureAuthUserId(ctx)
-        return await listLibraryPageWithGameSnapshotByUser(ctx, userId, args.paginationOpts)
+        return await listLibraryPageWithGameSnapshotByUser(
+            ctx,
+            userId,
+            args.paginationOpts,
+        )
     },
 })
+
+const librarySortByValidator = v.union(
+    v.literal('default'),
+    v.literal('wants_desc'),
+    v.literal('rating_desc'),
+)
 
 export const listMyLibraryFiltered = query({
     args: {
         paginationOpts: paginationOptsValidator,
         progressStatus: v.optional(progressStatusValidator),
+        progressStatuses: v.optional(v.array(progressStatusValidator)),
         wantsToPlayMin: v.optional(v.number()),
         platform: v.optional(platformValidator),
+        platforms: v.optional(v.array(platformValidator)),
+        includeNoPlatforms: v.optional(v.boolean()),
+        search: v.optional(v.string()),
+        sortBy: v.optional(librarySortByValidator),
     },
     handler: async (ctx, args) => {
         const userId = await ensureAuthUserId(ctx)
@@ -46,13 +61,21 @@ export const listMyLibraryFiltered = query({
         const wantsToPlayMin = args.wantsToPlayMin ?? 0
         assertValidWantsToPlayMin(wantsToPlayMin)
 
+        const progressStatuses =
+            args.progressStatuses ??
+            (args.progressStatus ? [args.progressStatus] : undefined)
+        const platforms = args.platforms ?? (args.platform ? [args.platform] : undefined)
+
         return await listFilteredLibraryPageWithGameSnapshotByUser(
             ctx,
             userId,
             {
-                progressStatus: args.progressStatus,
+                progressStatuses,
                 wantsToPlayMin,
-                platform: args.platform,
+                platforms,
+                includeNoPlatforms: args.includeNoPlatforms,
+                search: args.search,
+                sortBy: args.sortBy,
             },
             args.paginationOpts,
         )

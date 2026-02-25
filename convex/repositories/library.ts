@@ -4,6 +4,8 @@ import type { MutationCtx, QueryCtx } from '../_generated/server'
 type LibraryEntryDoc = Doc<'libraryEntries'>
 type PaginationOptions = { cursor: string | null; numItems: number }
 
+type LibraryEntryWithSnapshot = Awaited<ReturnType<typeof withGameSnapshot>>[number]
+
 export const getGameById = async (ctx: MutationCtx, gameId: Id<'games'>) => {
     return await ctx.db.get(gameId)
 }
@@ -113,23 +115,109 @@ export const listLibraryPageWithGameSnapshotByUser = async (
     return { ...result, page }
 }
 
+const normalizedSearchTerm = (value?: string) => value?.trim().toLowerCase() ?? ''
+
+const filterAndSortEntries = (
+    entries: LibraryEntryWithSnapshot[],
+    filters: {
+        progressStatuses?: Array<Doc<'libraryEntries'>['progressStatus']>
+        wantsToPlayMin: number
+        platforms?: Array<Doc<'libraryEntries'>['platforms'][number]>
+        includeNoPlatforms?: boolean
+        search?: string
+        sortBy?: 'default' | 'wants_desc' | 'rating_desc'
+    },
+) => {
+    const searchTerm = normalizedSearchTerm(filters.search)
+
+    const filtered = entries.filter((entry) => {
+        if (
+            filters.progressStatuses &&
+            filters.progressStatuses.length > 0 &&
+            !filters.progressStatuses.includes(entry.progressStatus)
+        ) {
+            return false
+        }
+
+        if (filters.wantsToPlayMin > 0 && entry.wantsToPlay < filters.wantsToPlayMin) {
+            return false
+        }
+
+        const hasPlatformFilter =
+            Boolean(filters.includeNoPlatforms) ||
+            Boolean(filters.platforms && filters.platforms.length > 0)
+        if (hasPlatformFilter) {
+            const matchesSelectedPlatform =
+                filters.platforms?.some((platform) =>
+                    entry.platforms.includes(platform),
+                ) ?? false
+            const matchesNoPlatforms =
+                Boolean(filters.includeNoPlatforms) && entry.platforms.length === 0
+            if (!matchesSelectedPlatform && !matchesNoPlatforms) {
+                return false
+            }
+        }
+
+        if (searchTerm.length > 0) {
+            const title = entry.game?.title.toLowerCase() ?? ''
+            const note = entry.note?.toLowerCase() ?? ''
+            if (!title.includes(searchTerm) && !note.includes(searchTerm)) {
+                return false
+            }
+        }
+
+        return true
+    })
+
+    if (filters.sortBy === 'wants_desc') {
+        return [...filtered].sort((left, right) => {
+            if (right.wantsToPlay !== left.wantsToPlay) {
+                return right.wantsToPlay - left.wantsToPlay
+            }
+            return right.updatedAt - left.updatedAt
+        })
+    }
+
+    if (filters.sortBy === 'rating_desc') {
+        return [...filtered].sort((left, right) => {
+            if (right.rating !== left.rating) {
+                return right.rating - left.rating
+            }
+            return right.updatedAt - left.updatedAt
+        })
+    }
+
+    return filtered
+}
+
 export const listFilteredLibraryPageWithGameSnapshotByUser = async (
     ctx: QueryCtx,
     userId: string,
     filters: {
-        progressStatus?: Doc<'libraryEntries'>['progressStatus']
+        progressStatuses?: Array<Doc<'libraryEntries'>['progressStatus']>
         wantsToPlayMin: number
-        platform?: Doc<'libraryEntries'>['platforms'][number]
+        platforms?: Array<Doc<'libraryEntries'>['platforms'][number]>
+        includeNoPlatforms?: boolean
+        search?: string
+        sortBy?: 'default' | 'wants_desc' | 'rating_desc'
     },
     paginationOpts: PaginationOptions,
 ) => {
     let result
 
-    if (filters.progressStatus) {
+    if (filters.sortBy === 'wants_desc') {
+        result = await ctx.db
+            .query('libraryEntries')
+            .withIndex('by_user_wantsToPlay', (q) => q.eq('userId', userId))
+            .order('desc')
+            .paginate(paginationOpts)
+    } else if (filters.progressStatuses && filters.progressStatuses.length === 1) {
         result = await ctx.db
             .query('libraryEntries')
             .withIndex('by_user_progress', (q) =>
-                q.eq('userId', userId).eq('progressStatus', filters.progressStatus!),
+                q
+                    .eq('userId', userId)
+                    .eq('progressStatus', filters.progressStatuses![0]!),
             )
             .order('desc')
             .paginate(paginationOpts)
@@ -145,16 +233,8 @@ export const listFilteredLibraryPageWithGameSnapshotByUser = async (
         result = await listLibraryEntriesPageByUser(ctx, userId, paginationOpts)
     }
 
-    const filteredPage = result.page.filter((entry) => {
-        if (filters.wantsToPlayMin > 0 && entry.wantsToPlay < filters.wantsToPlayMin) {
-            return false
-        }
-        if (filters.platform && !entry.platforms.includes(filters.platform)) {
-            return false
-        }
-        return true
-    })
+    const pageWithSnapshot = await withGameSnapshot(ctx, result.page)
+    const page = filterAndSortEntries(pageWithSnapshot, filters)
 
-    const page = await withGameSnapshot(ctx, filteredPage)
     return { ...result, page }
 }

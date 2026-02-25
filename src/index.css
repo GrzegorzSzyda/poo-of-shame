@@ -10,8 +10,13 @@
 }
 
 @layer base {
+    html {
+        overflow-y: scroll;
+        background-color: #0c0217;
+    }
+
     :root {
-        @apply text-text bg-bg font-sans text-[20px] leading-[2] antialiased;
+        @apply text-text font-sans text-[20px] leading-[2] antialiased;
     }
 
     body {

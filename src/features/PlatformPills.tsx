@@ -1,4 +1,5 @@
 import { cx } from 'cva'
+import type { ReactNode } from 'react'
 import { type Platform, platformLabel } from './libraryShared'
 
 const toneByPlatform: Record<Platform, string> = {
@@ -20,11 +21,13 @@ const toneByPlatform: Record<Platform, string> = {
 type PlatformPillSelectorProps = {
     selected: Platform[]
     onToggle: (platform: Platform) => void
+    afterItems?: ReactNode
 }
 
 export const PlatformPillSelector = ({
     selected,
     onToggle,
+    afterItems,
 }: PlatformPillSelectorProps) => (
     <div className="flex flex-wrap gap-2">
         {Object.keys(toneByPlatform).map((value) => {
@@ -47,6 +50,7 @@ export const PlatformPillSelector = ({
                 </button>
             )
         })}
+        {afterItems}
     </div>
 )
 

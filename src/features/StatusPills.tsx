@@ -11,7 +11,7 @@ import {
     type ProgressStatus,
     progressStatusDisplayTone,
     progressStatusLabel,
-    progressStatusSelectorTone,
+    progressStatusTextTone,
 } from './libraryShared'
 
 const statusIcon = (status: ProgressStatus) => {
@@ -33,16 +33,18 @@ type ProgressStatusPillsProps = {
     value: ProgressStatus
     onChange: (status: ProgressStatus) => void
     id?: string
+    size?: 'md' | 'lg'
 }
 
 export const ProgressStatusPills = ({
     value,
     onChange,
     id,
+    size = 'md',
 }: ProgressStatusPillsProps) => (
     <div
         id={id}
-        className="bg-bg/40 inline-flex w-full overflow-hidden rounded-xl"
+        className="inline-flex w-full border-b border-teal-300/30"
         role="radiogroup"
         aria-label="Status"
     >
@@ -57,9 +59,13 @@ export const ProgressStatusPills = ({
                     aria-checked={isActive}
                     data-active={isActive}
                     className={cx(
-                        'hover:bg-text/10 cursor-pointer px-3 py-2 text-sm transition-colors',
+                        'cursor-pointer border-b-2 transition-colors',
+                        isActive
+                            ? 'border-current'
+                            : 'border-transparent opacity-75 hover:opacity-100',
+                        progressStatusTextTone(status),
+                        size === 'lg' ? 'px-5 py-4 text-lg' : 'px-3 py-2 text-sm',
                         'flex-1 text-center whitespace-nowrap',
-                        progressStatusSelectorTone(status),
                     )}
                     onClick={() => onChange(status)}
                 >

@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
 set -e
 
-bun run lint
-bun run format
+bun run fix:staged

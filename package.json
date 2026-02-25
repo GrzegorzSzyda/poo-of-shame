@@ -9,6 +9,7 @@
         "build": "bun run build.ts",
         "convex": "convex dev",
         "prepare": "husky",
+        "fix:staged": "lint-staged",
         "lint": "oxlint",
         "lint:fix": "oxlint --fix",
         "format": "prettier --check \"src/**/*.{ts,tsx,js,jsx,css,md,json}\"",
@@ -36,8 +37,13 @@
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
         "husky": "^9.1.7",
+        "lint-staged": "^16.2.7",
         "oxlint": "^1.48.0",
         "prettier": "^3.8.1",
         "prettier-plugin-tailwindcss": "^0.7.2"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx}": "oxlint --fix",
+        "*.{js,jsx,ts,tsx,css,md,json}": "prettier --write"
     }
 }

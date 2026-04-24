@@ -2,6 +2,7 @@ import { MagnifyingGlassIcon, PlusIcon } from '@phosphor-icons/react'
 import { cx } from 'cva'
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '~/components/Button'
+import { CoverImage } from '~/components/CoverImage'
 import { Input } from '~/components/Input'
 import { formatIsoDatePl } from '~/utils/date'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -233,18 +234,11 @@ export const LibraryGameSearch = ({
                                             : undefined,
                                     )}
                                 >
-                                    {game.coverImageUrl ? (
-                                        <img
-                                            src={game.coverImageUrl}
-                                            alt={`Okładka: ${game.title}`}
-                                            className="h-14 w-10 shrink-0 rounded object-cover"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="bg-bg text-text/60 border-text/20 flex h-14 w-10 shrink-0 items-center justify-center rounded border text-xs">
-                                            brak
-                                        </div>
-                                    )}
+                                    <CoverImage
+                                        src={game.coverImageUrl}
+                                        title={game.title}
+                                        className="h-14 w-10 shrink-0 rounded object-cover"
+                                    />
                                     <div className="min-w-0 flex-1">
                                         <div className="text-text -mt-2 truncate">
                                             {game.title}

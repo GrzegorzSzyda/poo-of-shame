@@ -8,9 +8,10 @@ import {
     TrophyIcon,
     XCircleIcon,
 } from '@phosphor-icons/react'
-import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
-import { useMemo, useState } from 'react'
+import { useMutation, usePaginatedQuery } from 'convex/react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '~/components/Button'
+import { CoverImage } from '~/components/CoverImage'
 import { H1 } from '~/components/H1'
 import { Input } from '~/components/Input'
 import { useToast } from '~/components/Toast'
@@ -32,6 +33,7 @@ import {
     progressStatusUsesWantsToPlay,
     toLibraryErrorMessage,
 } from './libraryShared'
+import { useCachedLibraryGames } from './useCachedLibraryGames'
 
 type LibraryEntry = {
     _id: Id<'libraryEntries'>
@@ -80,7 +82,7 @@ const toDisplayReleaseDate = (releaseDate?: string, releaseYear?: number) =>
 
 export const LibraryPanel = ({ authReady }: Props) => {
     const { success, error: showError } = useToast()
-    const games = useQuery(api.games.listAll, authReady ? {} : 'skip')
+    const { games } = useCachedLibraryGames(authReady)
     const addToLibrary = useMutation(api.library.addToLibrary)
 
     const [addingGameId, setAddingGameId] = useState<string | null>(null)
@@ -133,6 +135,12 @@ export const LibraryPanel = ({ authReady }: Props) => {
             initialNumItems: 50,
         },
     )
+
+    useEffect(() => {
+        if (entriesStatus === 'CanLoadMore') {
+            loadMoreEntries(100)
+        }
+    }, [entriesStatus, loadMoreEntries])
 
     const libraryGameIds = useMemo(
         () => new Set(entries.map((entry) => String(entry.gameId))),
@@ -249,18 +257,11 @@ export const LibraryPanel = ({ authReady }: Props) => {
                                 className="hover:bg-text/6 rounded-lg p-4 transition-colors duration-200"
                             >
                                 <div className="flex items-start gap-4">
-                                    {entry.game?.coverImageUrl ? (
-                                        <img
-                                            src={entry.game.coverImageUrl}
-                                            alt={`Okładka: ${entryTitle}`}
-                                            className="h-24 w-16 shrink-0 rounded object-cover"
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="bg-bg text-text/60 border-text/20 flex h-24 w-16 shrink-0 items-center justify-center rounded border text-xs">
-                                            brak
-                                        </div>
-                                    )}
+                                    <CoverImage
+                                        src={entry.game?.coverImageUrl}
+                                        title={entryTitle}
+                                        className="h-24 w-16 shrink-0 rounded object-cover"
+                                    />
 
                                     <div className="min-w-0 flex-1">
                                         <div className="text-text -mt-2 flex flex-wrap items-center gap-y-1">
@@ -340,18 +341,6 @@ export const LibraryPanel = ({ authReady }: Props) => {
                     })}
                 </ul>
             )}
-
-            {entriesStatus === 'CanLoadMore' ? (
-                <Button
-                    type="button"
-                    className="mt-1"
-                    variant="ghost"
-                    onClick={() => loadMoreEntries(50)}
-                >
-                    Załaduj więcej wpisów
-                </Button>
-            ) : null}
-
             <LibraryEditDrawer
                 isOpen={isEditDrawerOpen}
                 onClose={() => {

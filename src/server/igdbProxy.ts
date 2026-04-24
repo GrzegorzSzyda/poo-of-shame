@@ -4,6 +4,7 @@ const IGDB_API_BASE_URL = 'https://api.igdb.com/v4'
 const IGDB_CLIENT_ID = Bun.env.IGDB_CLIENT_ID
 const IGDB_CLIENT_SECRET = Bun.env.IGDB_CLIENT_SECRET
 const IGDB_STATIC_TOKEN = Bun.env.IGDB_ACCESS_TOKEN
+const CAN_REFRESH_TOKEN = Boolean(IGDB_CLIENT_SECRET)
 
 if (!IGDB_CLIENT_ID) {
     throw new Error('Missing IGDB_CLIENT_ID in environment variables.')
@@ -101,6 +102,21 @@ const forwardIgdbRequest = async (resource: string, query: string, token: string
         body: query,
     })
 
+const createAuthErrorResponse = (origin: string | null, error: Error) =>
+    new Response(
+        JSON.stringify({
+            error: 'Unable to authenticate with IGDB.',
+            details: error.message,
+        }),
+        {
+            status: 502,
+            headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders(origin),
+            },
+        },
+    )
+
 const handleIgdbPost = async (
     req: BunRequest<'/api/igdb/:resource'>,
 ): Promise<Response> => {
@@ -147,13 +163,25 @@ const handleIgdbPost = async (
         })
     }
 
-    let token = await getAccessToken()
+    let token: TokenCache
+    try {
+        token = await getAccessToken()
+    } catch (error) {
+        return createAuthErrorResponse(origin, error as Error)
+    }
+
     let igdbResponse = await forwardIgdbRequest(resource, query, token.token)
 
-    if (igdbResponse.status === 401 && !token.static) {
+    if (igdbResponse.status === 401 && CAN_REFRESH_TOKEN) {
         cachedToken = null
-        token = await getAccessToken(true)
-        igdbResponse = await forwardIgdbRequest(resource, query, token.token)
+        try {
+            token = await getAccessToken(true)
+            igdbResponse = await forwardIgdbRequest(resource, query, token.token)
+        } catch (error) {
+            if (!token.static) {
+                return createAuthErrorResponse(origin, error as Error)
+            }
+        }
     }
 
     const responseHeaders = new Headers({

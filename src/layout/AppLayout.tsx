@@ -14,7 +14,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
 
     return (
         <div className="flex min-h-screen">
-            <aside className="flex min-h-screen shrink-0 flex-col bg-[linear-gradient(to_top,rgba(182,160,206,0.1)_0%,rgba(182,160,206,0.03)_100%)]">
+            <aside className="sticky top-0 flex h-screen max-h-screen shrink-0 flex-col overflow-y-auto bg-[linear-gradient(to_top,rgba(182,160,206,0.1)_0%,rgba(182,160,206,0.03)_100%)]">
                 <Logo />
                 <nav className="mt-8 flex flex-col gap-2 px-4">
                     <Link
@@ -57,7 +57,7 @@ export const AppLayout = ({ children }: AppLayoutProps) => {
                     <UserMenu />
                 </div>
             </aside>
-            <main className="min-h-screen flex-1 p-8">{children}</main>
+            <main className="min-h-screen min-w-0 flex-1 p-8">{children}</main>
         </div>
     )
 }

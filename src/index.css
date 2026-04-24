@@ -38,6 +38,17 @@
 }
 
 @layer utilities {
+    .app-surface-panel {
+        background-color: #0c0217;
+        background-image: radial-gradient(
+            circle at 82% 10%,
+            rgba(94, 234, 212, 0.14) 0%,
+            rgba(94, 234, 212, 0.07) 18%,
+            rgba(12, 2, 23, 0) 46%
+        );
+        background-position: center top;
+    }
+
     .overlay-fade {
         transition: opacity 420ms ease-out;
     }

@@ -186,46 +186,48 @@ export const LibraryPanel = ({ authReady }: Props) => {
 
     return (
         <section className="space-y-4">
-            <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-12">
-                <H1 startIcon={ListBulletsIcon}>Moja kupka</H1>
-                <LibraryGameSearch
-                    className="w-full"
-                    games={games}
-                    libraryGameIds={libraryGameIds}
-                    addingGameId={addingGameId}
-                    onAdd={(game) => void handleAddFromSearch(game)}
-                />
-            </div>
+            <div className="app-surface-panel border-text/10 sticky top-0 z-20 -mx-8 space-y-4 border-b px-8 pt-1 pb-4">
+                <div className="grid grid-cols-[max-content_minmax(0,1fr)] items-start gap-12">
+                    <H1 startIcon={ListBulletsIcon}>Moja kupka</H1>
+                    <LibraryGameSearch
+                        className="w-full"
+                        games={games}
+                        libraryGameIds={libraryGameIds}
+                        addingGameId={addingGameId}
+                        onAdd={(game) => void handleAddFromSearch(game)}
+                    />
+                </div>
 
-            <div className="w-full py-3">
-                <ProgressStatusPills
-                    id="library-status-tabs"
-                    value={activeStatus}
-                    onChange={setActiveStatus}
-                    size="lg"
-                />
-            </div>
+                <div className="w-full py-3">
+                    <ProgressStatusPills
+                        id="library-status-tabs"
+                        value={activeStatus}
+                        onChange={setActiveStatus}
+                        size="lg"
+                    />
+                </div>
 
-            <div className="space-y-3">
-                <Input
-                    value={searchValue}
-                    onChange={(event) => setSearchValue(event.target.value)}
-                    placeholder="Szukaj po tytule lub notatce"
-                />
-                <PlatformFilterPills
-                    selected={selectedPlatforms}
-                    onToggle={(platform) =>
-                        setSelectedPlatforms((current) =>
-                            current.includes(platform)
-                                ? current.filter((value) => value !== platform)
-                                : [...current, platform],
-                        )
-                    }
-                    includeNoPlatforms={includeNoPlatforms}
-                    onToggleNoPlatforms={() =>
-                        setIncludeNoPlatforms((current) => !current)
-                    }
-                />
+                <div className="space-y-3">
+                    <Input
+                        value={searchValue}
+                        onChange={(event) => setSearchValue(event.target.value)}
+                        placeholder="Szukaj po tytule lub notatce"
+                    />
+                    <PlatformFilterPills
+                        selected={selectedPlatforms}
+                        onToggle={(platform) =>
+                            setSelectedPlatforms((current) =>
+                                current.includes(platform)
+                                    ? current.filter((value) => value !== platform)
+                                    : [...current, platform],
+                            )
+                        }
+                        includeNoPlatforms={includeNoPlatforms}
+                        onToggleNoPlatforms={() =>
+                            setIncludeNoPlatforms((current) => !current)
+                        }
+                    />
+                </div>
             </div>
 
             {entriesStatus === 'LoadingFirstPage' ? (

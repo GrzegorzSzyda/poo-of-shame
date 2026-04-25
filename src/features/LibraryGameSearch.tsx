@@ -21,6 +21,8 @@ type Props = {
     addingGameId: string | null
     onAdd: (game: GameItem) => void
     className?: string
+    compact?: boolean
+    compressed?: boolean
 }
 
 const toDisplayReleaseDate = (game: GameItem) =>
@@ -33,6 +35,8 @@ export const LibraryGameSearch = ({
     addingGameId,
     onAdd,
     className,
+    compact = false,
+    compressed = false,
 }: Props) => {
     const OVERLAY_FADE_MS = 420
     const [query, setQuery] = useState('')
@@ -201,7 +205,10 @@ export const LibraryGameSearch = ({
                 <MagnifyingGlassIcon className="text-text/60 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2" />
                 <Input
                     id="library-game-search"
-                    className="pl-10"
+                    className={cx(
+                        'pl-10 transition-[height,font-size,padding] duration-150',
+                        compressed ? 'h-8 py-0 text-sm' : compact ? 'h-10 text-sm' : '',
+                    )}
                     placeholder="Wyszukaj grę i dodaj do kupki"
                     value={query}
                     onChange={(event) => {

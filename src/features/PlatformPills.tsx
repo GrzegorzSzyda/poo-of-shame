@@ -22,14 +22,21 @@ type PlatformPillSelectorProps = {
     selected: Platform[]
     onToggle: (platform: Platform) => void
     afterItems?: ReactNode
+    compact?: boolean
 }
 
 export const PlatformPillSelector = ({
     selected,
     onToggle,
     afterItems,
+    compact = false,
 }: PlatformPillSelectorProps) => (
-    <div className="flex flex-wrap gap-2">
+    <div
+        className={cx(
+            'flex flex-wrap gap-x-2 transition-[row-gap] duration-150',
+            compact ? 'gap-y-1' : 'gap-y-2',
+        )}
+    >
         {Object.keys(toneByPlatform).map((value) => {
             const platform = value as Platform
             const isSelected = selected.includes(platform)
@@ -40,7 +47,8 @@ export const PlatformPillSelector = ({
                     aria-pressed={isSelected}
                     onClick={() => onToggle(platform)}
                     className={cx(
-                        'inline-flex cursor-pointer items-center rounded-full border px-3 py-1 text-xs transition-colors',
+                        'inline-flex cursor-pointer items-center rounded-full border px-3 text-xs transition-[padding,color,background-color,border-color] duration-150',
+                        compact ? 'py-0.5' : 'py-1',
                         isSelected
                             ? toneByPlatform[platform]
                             : 'border-text/25 text-text/75 hover:bg-text/10',

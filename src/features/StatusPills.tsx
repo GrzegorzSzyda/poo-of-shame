@@ -34,6 +34,7 @@ type ProgressStatusPillsProps = {
     onChange: (status: ProgressStatus) => void
     id?: string
     size?: 'md' | 'lg'
+    compact?: boolean
 }
 
 export const ProgressStatusPills = ({
@@ -41,6 +42,7 @@ export const ProgressStatusPills = ({
     onChange,
     id,
     size = 'md',
+    compact = false,
 }: ProgressStatusPillsProps) => (
     <div
         id={id}
@@ -59,17 +61,26 @@ export const ProgressStatusPills = ({
                     aria-checked={isActive}
                     data-active={isActive}
                     className={cx(
-                        'cursor-pointer border-b-2 transition-colors',
+                        'cursor-pointer border-b-2 transition-[padding,color,border-color,opacity] duration-150',
                         isActive
                             ? 'border-current'
                             : 'border-transparent opacity-75 hover:opacity-100',
                         progressStatusTextTone(status),
-                        size === 'lg' ? 'px-5 py-4 text-lg' : 'px-3 py-2 text-sm',
+                        size === 'lg'
+                            ? compact
+                                ? 'px-5 py-2.5 text-lg'
+                                : 'px-5 py-4 text-lg'
+                            : 'px-3 py-2 text-sm',
                         'flex-1 text-center whitespace-nowrap',
                     )}
                     onClick={() => onChange(status)}
                 >
-                    <span className="inline-flex items-center gap-1.5">
+                    <span
+                        className={cx(
+                            'inline-flex items-center transition-[gap] duration-150',
+                            compact ? 'gap-1' : 'gap-1.5',
+                        )}
+                    >
                         <StatusIcon className="h-3.5 w-3.5" />
                         {progressStatusLabel(status)}
                     </span>

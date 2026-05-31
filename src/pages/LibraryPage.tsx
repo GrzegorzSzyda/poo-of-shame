@@ -12,6 +12,19 @@ type UserGameStatus =
     | 'mastered'
     | 'dropped'
 
+type GameRunStatus = 'planned' | 'playing' | 'completed' | 'mastered' | 'dropped'
+
+type GameRunType =
+    | 'first_playthrough'
+    | 'replay'
+    | 'new_game_plus'
+    | 'dlc'
+    | 'challenge'
+    | 'coop'
+    | 'other'
+
+type RunDatePrecision = 'unknown' | 'exact'
+
 type CatalogSearchGame = {
     _id: Id<'games'>
     title: string
@@ -22,6 +35,17 @@ type CatalogSearchGame = {
     releaseText?: string
     coverImageUrl?: string
     isInLibrary: boolean
+}
+
+type GameRun = {
+    _id: Id<'gameRuns'>
+    status: GameRunStatus
+    label?: string
+    runType?: GameRunType
+    startedPrecision: RunDatePrecision
+    startedDate?: string
+    finishedPrecision: RunDatePrecision
+    finishedDate?: string
 }
 
 type LibraryEntry = {
@@ -51,6 +75,32 @@ const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
 const statusLabels = Object.fromEntries(
     statusOptions.map((option) => [option.value, option.label]),
 ) as Record<UserGameStatus, string>
+
+const runStatusOptions: Array<{ value: GameRunStatus; label: string }> = [
+    { value: 'planned', label: 'Planowany' },
+    { value: 'playing', label: 'W trakcie' },
+    { value: 'completed', label: 'Ukończony' },
+    { value: 'mastered', label: 'Wymaksowany' },
+    { value: 'dropped', label: 'Porzucony' },
+]
+
+const runTypeOptions: Array<{ value: GameRunType; label: string }> = [
+    { value: 'first_playthrough', label: 'Pierwsze przejście' },
+    { value: 'replay', label: 'Replay' },
+    { value: 'new_game_plus', label: 'New Game+' },
+    { value: 'dlc', label: 'DLC' },
+    { value: 'challenge', label: 'Challenge' },
+    { value: 'coop', label: 'Co-op' },
+    { value: 'other', label: 'Inny' },
+]
+
+const runStatusLabels = Object.fromEntries(
+    runStatusOptions.map((option) => [option.value, option.label]),
+) as Record<GameRunStatus, string>
+
+const runTypeLabels = Object.fromEntries(
+    runTypeOptions.map((option) => [option.value, option.label]),
+) as Record<GameRunType, string>
 
 const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
 
@@ -96,6 +146,14 @@ const getLibraryErrorMessage = (error: unknown, fallback: string) => {
         return 'Nie możesz edytować tego wpisu.'
     }
 
+    if (message.includes('STARTED_DATE_INVALID')) {
+        return 'Data startu runu jest nieprawidłowa.'
+    }
+
+    if (message.includes('FINISHED_DATE_INVALID')) {
+        return 'Data zakończenia runu jest nieprawidłowa.'
+    }
+
     if (message.includes('INTEREST_INVALID')) {
         return 'Zainteresowanie musi być w zakresie 0-100.'
     }
@@ -117,10 +175,244 @@ const Cover = ({ game }: { game: { title: string; coverImageUrl?: string } }) =>
         </div>
     )
 
+const formatRunDate = (precision: RunDatePrecision, date?: string) =>
+    precision === 'exact' && date ? date : 'brak daty'
+
+const RunListItem = ({ run }: { run: GameRun }) => (
+    <li className="grid gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 p-3 md:grid-cols-[minmax(0,1fr)_9rem_9rem]">
+        <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-zinc-100">
+                {run.label?.trim() || runStatusLabels[run.status]}
+            </p>
+            <p className="mt-1 text-xs text-zinc-500">
+                {run.runType ? runTypeLabels[run.runType] : 'Bez typu'}
+            </p>
+        </div>
+        <p className="text-sm text-zinc-400">
+            Start: {formatRunDate(run.startedPrecision, run.startedDate)}
+        </p>
+        <p className="text-sm text-zinc-400">
+            Koniec: {formatRunDate(run.finishedPrecision, run.finishedDate)}
+        </p>
+    </li>
+)
+
+const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
+    const createGameRun = useMutation(api.library.createGameRun)
+    const runs = useQuery(api.library.listRunsForUserGame, { userGameId })
+    const [status, setStatus] = useState<GameRunStatus>('planned')
+    const [runType, setRunType] = useState<GameRunType | ''>('first_playthrough')
+    const [label, setLabel] = useState('')
+    const [startedPrecision, setStartedPrecision] = useState<RunDatePrecision>('unknown')
+    const [startedDate, setStartedDate] = useState('')
+    const [finishedPrecision, setFinishedPrecision] =
+        useState<RunDatePrecision>('unknown')
+    const [finishedDate, setFinishedDate] = useState('')
+    const [message, setMessage] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handleSubmit = async (event: FormEvent) => {
+        event.preventDefault()
+        setMessage(null)
+        setError(null)
+        setIsSubmitting(true)
+
+        try {
+            await createGameRun({
+                userGameId,
+                status,
+                label: label.trim().length > 0 ? label.trim() : undefined,
+                runType: runType || undefined,
+                startedPrecision,
+                startedDate: startedPrecision === 'exact' ? startedDate : undefined,
+                finishedPrecision,
+                finishedDate: finishedPrecision === 'exact' ? finishedDate : undefined,
+            })
+            setStatus('planned')
+            setRunType('first_playthrough')
+            setLabel('')
+            setStartedPrecision('unknown')
+            setStartedDate('')
+            setFinishedPrecision('unknown')
+            setFinishedDate('')
+            setMessage('Dodano run.')
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się dodać runu.'))
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    return (
+        <section className="mt-3 space-y-4 rounded-md border border-zinc-800 bg-zinc-950/60 p-3">
+            <div>
+                <h3 className="text-sm font-medium text-zinc-100">Runy</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                    Dodanie runu aktualizuje ostatni run tej gry.
+                </p>
+            </div>
+
+            {runs === undefined ? (
+                <p className="text-sm text-zinc-400">Ładowanie runów...</p>
+            ) : runs.length > 0 ? (
+                <ul className="space-y-2">
+                    {runs.map((run) => (
+                        <RunListItem key={run._id} run={run} />
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-zinc-400">Brak runów dla tej gry.</p>
+            )}
+
+            <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`run-status-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Status runu
+                        </label>
+                        <select
+                            id={`run-status-${userGameId}`}
+                            value={status}
+                            onChange={(event) =>
+                                setStatus(event.target.value as GameRunStatus)
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {runStatusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`run-type-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Typ
+                        </label>
+                        <select
+                            id={`run-type-${userGameId}`}
+                            value={runType}
+                            onChange={(event) =>
+                                setRunType(event.target.value as GameRunType | '')
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            <option value="">Bez typu</option>
+                            {runTypeOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`run-label-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Label
+                        </label>
+                        <input
+                            id={`run-label-${userGameId}`}
+                            value={label}
+                            onChange={(event) => setLabel(event.target.value)}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            placeholder="np. PS5 run"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2">
+                    <div className="space-y-2 rounded-md border border-zinc-800 p-3">
+                        <label
+                            htmlFor={`run-started-precision-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Start
+                        </label>
+                        <select
+                            id={`run-started-precision-${userGameId}`}
+                            value={startedPrecision}
+                            onChange={(event) =>
+                                setStartedPrecision(
+                                    event.target.value as RunDatePrecision,
+                                )
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            <option value="unknown">Brak daty</option>
+                            <option value="exact">Dokładna data</option>
+                        </select>
+                        {startedPrecision === 'exact' ? (
+                            <input
+                                type="date"
+                                value={startedDate}
+                                onChange={(event) => setStartedDate(event.target.value)}
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            />
+                        ) : null}
+                    </div>
+
+                    <div className="space-y-2 rounded-md border border-zinc-800 p-3">
+                        <label
+                            htmlFor={`run-finished-precision-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Koniec
+                        </label>
+                        <select
+                            id={`run-finished-precision-${userGameId}`}
+                            value={finishedPrecision}
+                            onChange={(event) =>
+                                setFinishedPrecision(
+                                    event.target.value as RunDatePrecision,
+                                )
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            <option value="unknown">Brak daty</option>
+                            <option value="exact">Dokładna data</option>
+                        </select>
+                        {finishedPrecision === 'exact' ? (
+                            <input
+                                type="date"
+                                value={finishedDate}
+                                onChange={(event) => setFinishedDate(event.target.value)}
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            />
+                        ) : null}
+                    </div>
+                </div>
+
+                {message ? <p className="text-sm text-teal-200">{message}</p> : null}
+                {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-teal-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {isSubmitting ? 'Dodawanie...' : 'Dodaj run'}
+                </button>
+            </form>
+        </section>
+    )
+}
+
 const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
     const updateLibraryGame = useMutation(api.library.updateLibraryGame)
     const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
     const [isEditing, setIsEditing] = useState(false)
+    const [isShowingRuns, setIsShowingRuns] = useState(false)
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
     const [status, setStatus] = useState<UserGameStatus>(entry.status)
     const [interest, setInterest] = useState(entry.interest)
@@ -209,6 +501,13 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                         className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
                     >
                         {isEditing ? 'Zamknij' : 'Edytuj'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsShowingRuns((current) => !current)}
+                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 md:mt-0 md:ml-2"
+                    >
+                        {isShowingRuns ? 'Ukryj runy' : 'Runy'}
                     </button>
                     {isConfirmingDelete ? (
                         <button
@@ -321,6 +620,8 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                     </div>
                 </form>
             ) : null}
+
+            {isShowingRuns ? <RunsPanel userGameId={entry._id} /> : null}
         </li>
     )
 }

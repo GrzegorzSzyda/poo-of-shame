@@ -1,6 +1,6 @@
 # Aktualny Stan Projektu
 
-Ostatnia aktualizacja: 2026-05-31.
+Ostatnia aktualizacja: 2026-06-01.
 
 ## Cel Rewrite
 
@@ -198,6 +198,8 @@ Backend:
 - `addGameToLibrary`
 - `updateLibraryGame`
 - `removeGameFromLibrary`
+- `listRunsForUserGame`
+- `createGameRun`
 
 Zasady:
 
@@ -210,7 +212,12 @@ Zasady:
 - istniejace wpisy `userGames` mozna edytowac inline na liscie,
 - wpisy `userGames` mozna usuwac z potwierdzeniem, dopoki nie maja `gameRuns`
   albo `gameAccess`,
-- ten slice nie tworzy jeszcze `gameRuns` ani `gameAccess`.
+- runy sa pokazywane inline pod wpisem biblioteki,
+- dodanie runu aktualizuje `lastRunId`, a pierwszy run ustawia tez
+  `pinnedRunId`,
+- formularz runu obsluguje status, opcjonalny typ, opcjonalny label oraz daty
+  startu/konca tylko jako `unknown` albo `exact`,
+- ten slice nie tworzy jeszcze `gameAccess`.
 
 ## Lokalna Praca
 
@@ -239,7 +246,7 @@ PORT=3002 bun dev
 
 1. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
    szybko przestanie wystarczac.
-2. Dodac zarzadzanie statusami `userGames`.
-3. Dodac pierwszy flow tworzenia runu dla gry w bibliotece.
+2. Dodac edycje i usuwanie runow.
+3. Ustalic automatyke miedzy statusami `userGames` i `gameRuns`.
 4. Zaplanowac migracje `libraryEntries` do nowego modelu, ale dopiero gdy nowe
    widoki beda gotowe.

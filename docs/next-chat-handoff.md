@@ -39,6 +39,9 @@ Zawiera:
 - inline edycje statusu i `interest` na liscie `/library`,
 - usuwanie wpisow z kupki z blokada, jesli istnieja powiazane `gameRuns` albo
   `gameAccess`,
+- inline panel runow pod wpisem `/library`,
+- tworzenie runu z uproszczonymi datami `unknown`/`exact`,
+- `createGameRun` aktualizuje `lastRunId`, a pierwszy run ustawia `pinnedRunId`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -119,10 +122,11 @@ PORT=3002 bun dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to pierwszy kontrolowany flow runow:
+Najlepszy kolejny krok to rozbudowa runow:
 
-- decyzja, kiedy zmiana statusu tworzy albo aktualizuje `gameRuns`,
-- podstawowe dodanie pierwszego runu dla gry w bibliotece.
+- edycja i usuwanie runow,
+- rating dla runow,
+- decyzja, kiedy zmiana statusu gry aktualizuje albo sugeruje aktualizacje runu.
 
 Nie migrowac jeszcze `libraryEntries`, dopoki nowe widoki nie sa wygodne do
 codziennego uzywania.

@@ -12,6 +12,26 @@ const userGameStatusValidator = v.union(
     v.literal('dropped'),
 )
 
+const gameRunStatusValidator = v.union(
+    v.literal('planned'),
+    v.literal('playing'),
+    v.literal('completed'),
+    v.literal('mastered'),
+    v.literal('dropped'),
+)
+
+const gameRunTypeValidator = v.union(
+    v.literal('first_playthrough'),
+    v.literal('replay'),
+    v.literal('new_game_plus'),
+    v.literal('dlc'),
+    v.literal('challenge'),
+    v.literal('coop'),
+    v.literal('other'),
+)
+
+const runDatePrecisionValidator = v.union(v.literal('exact'), v.literal('unknown'))
+
 type UserGameStatus =
     | 'wanted'
     | 'owned'
@@ -45,6 +65,41 @@ const assertInterest = (interest: number) => {
     return Math.round(interest)
 }
 
+const isValidIsoDate = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+    const parsed = new Date(`${value}T00:00:00.000Z`)
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
+const toYearMonth = (date: string) => date.slice(0, 7)
+
+const buildRunDateFields = (
+    prefix: 'started' | 'finished',
+    precision: 'exact' | 'unknown',
+    date?: string,
+) => {
+    if (precision === 'unknown') {
+        return {
+            [`${prefix}Precision`]: precision,
+        }
+    }
+
+    const trimmedDate = date?.trim() ?? ''
+    if (!isValidIsoDate(trimmedDate)) {
+        throw new ConvexError(
+            prefix === 'started' ? 'STARTED_DATE_INVALID' : 'FINISHED_DATE_INVALID',
+        )
+    }
+
+    return {
+        [`${prefix}Precision`]: precision,
+        [`${prefix}Date`]: trimmedDate,
+        [`${prefix}Year`]: Number(trimmedDate.slice(0, 4)),
+        [`${prefix}Month`]: Number(trimmedDate.slice(5, 7)),
+        [`${prefix}YearMonth`]: toYearMonth(trimmedDate),
+    }
+}
+
 const toLibraryGame = (userGame: Doc<'userGames'>, game: Doc<'games'> | null) => ({
     _id: userGame._id,
     gameId: userGame.gameId,
@@ -64,6 +119,18 @@ const toLibraryGame = (userGame: Doc<'userGames'>, game: Doc<'games'> | null) =>
               coverImageUrl: game.coverImageUrl,
           }
         : null,
+})
+
+const toRunListItem = (run: Doc<'gameRuns'>) => ({
+    _id: run._id,
+    status: run.status,
+    label: run.label,
+    runType: run.runType,
+    startedPrecision: run.startedPrecision,
+    startedDate: run.startedDate,
+    finishedPrecision: run.finishedPrecision,
+    finishedDate: run.finishedDate,
+    createdAt: run.createdAt,
 })
 
 export const searchCatalogForLibrary = query({
@@ -240,5 +307,81 @@ export const removeGameFromLibrary = mutation({
         }
 
         await ctx.db.delete(args.userGameId)
+    },
+})
+
+export const listRunsForUserGame = query({
+    args: {
+        userGameId: v.id('userGames'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const runs = await ctx.db
+            .query('gameRuns')
+            .withIndex('by_user_userGame', (q) =>
+                q.eq('userId', identity.subject).eq('userGameId', args.userGameId),
+            )
+            .order('desc')
+            .take(50)
+
+        return runs.map(toRunListItem)
+    },
+})
+
+export const createGameRun = mutation({
+    args: {
+        userGameId: v.id('userGames'),
+        status: gameRunStatusValidator,
+        label: v.optional(v.string()),
+        runType: v.optional(gameRunTypeValidator),
+        startedPrecision: runDatePrecisionValidator,
+        startedDate: v.optional(v.string()),
+        finishedPrecision: runDatePrecisionValidator,
+        finishedDate: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const label = args.label?.trim()
+        const now = Date.now()
+        const runId = await ctx.db.insert('gameRuns', {
+            userId: identity.subject,
+            userGameId: args.userGameId,
+            gameId: userGame.gameId,
+            status: args.status,
+            label: label && label.length > 0 ? label : undefined,
+            runType: args.runType,
+            ...buildRunDateFields('started', args.startedPrecision, args.startedDate),
+            ...buildRunDateFields('finished', args.finishedPrecision, args.finishedDate),
+            createdAt: now,
+            updatedAt: now,
+        })
+
+        await ctx.db.patch(args.userGameId, {
+            lastRunId: runId,
+            pinnedRunId: userGame.pinnedRunId ?? runId,
+            updatedAt: now,
+        })
+
+        return runId
     },
 })

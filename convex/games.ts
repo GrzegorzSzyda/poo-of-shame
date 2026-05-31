@@ -5,6 +5,8 @@ import type { MutationCtx, QueryCtx } from './_generated/server'
 import { ensureAdmin } from './admin'
 
 const MAX_COVER_IMAGE_SIZE_BYTES = 8 * 1024 * 1024
+const IGDB_API_BASE_URL = 'https://api.igdb.com/v4'
+const IGDB_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 
 const releasePrecisionValidator = v.union(
     v.literal('exact'),
@@ -130,6 +132,23 @@ const buildReleaseFields = (input: {
 type ReleasePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
 
 type ReleaseFields = ReturnType<typeof buildReleaseFields>
+
+type IgdbTokenCache = {
+    clientId: string
+    token: string
+    expiresAt: number
+}
+
+type IgdbGameSearchResult = {
+    id?: unknown
+    name?: unknown
+    first_release_date?: unknown
+    cover?: {
+        image_id?: unknown
+    }
+}
+
+let igdbTokenCache: IgdbTokenCache | null = null
 
 const findExistingGame = async (
     ctx: QueryCtx | MutationCtx,
@@ -449,5 +468,142 @@ export const uploadCoverFromUrl = action({
         }
 
         return storageUrl
+    },
+})
+
+const escapeIgdbSearchText = (value: string) =>
+    value.replaceAll('\\', ' ').replaceAll('"', ' ').trim().replace(/\s+/g, ' ')
+
+const getIgdbAccessToken = async (credentials: {
+    clientId: string
+    clientSecret: string
+}) => {
+    if (
+        igdbTokenCache &&
+        igdbTokenCache.clientId === credentials.clientId &&
+        igdbTokenCache.expiresAt > Date.now()
+    ) {
+        return igdbTokenCache.token
+    }
+
+    const body = new URLSearchParams({
+        client_id: credentials.clientId,
+        client_secret: credentials.clientSecret,
+        grant_type: 'client_credentials',
+    })
+
+    const response = await fetch(IGDB_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body,
+    })
+
+    if (!response.ok) {
+        throw new ConvexError('IGDB_AUTH_FAILED')
+    }
+
+    const payload = (await response.json()) as {
+        access_token?: unknown
+        expires_in?: unknown
+    }
+
+    if (typeof payload.access_token !== 'string') {
+        throw new ConvexError('IGDB_AUTH_FAILED')
+    }
+
+    const expiresIn =
+        typeof payload.expires_in === 'number' && payload.expires_in > 0
+            ? payload.expires_in
+            : 3600
+
+    igdbTokenCache = {
+        clientId: credentials.clientId,
+        token: payload.access_token,
+        expiresAt: Date.now() + expiresIn * 1000 - 60_000,
+    }
+
+    return igdbTokenCache.token
+}
+
+const toIgdbCoverUrl = (imageId: string) =>
+    `https://images.igdb.com/igdb/image/upload/t_cover_big/${imageId}.jpg`
+
+const toIsoReleaseDate = (firstReleaseDate: number) => {
+    const date = new Date(firstReleaseDate * 1000)
+    if (Number.isNaN(date.getTime())) return null
+    return date.toISOString().slice(0, 10)
+}
+
+export const searchIgdbGames = action({
+    args: {
+        searchText: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const credentials = await ctx.runQuery(
+            internal.admin.getIgdbCredentialsForCurrentAdmin,
+            {},
+        )
+
+        if (!credentials) {
+            throw new ConvexError('IGDB_NOT_CONFIGURED')
+        }
+
+        const searchText = escapeIgdbSearchText(args.searchText)
+        if (searchText.length < 2) {
+            return []
+        }
+
+        const token = await getIgdbAccessToken(credentials)
+        const query = [
+            `search "${searchText}";`,
+            'fields id,name,first_release_date,cover.image_id;',
+            'limit 10;',
+        ].join(' ')
+
+        const response = await fetch(`${IGDB_API_BASE_URL}/games`, {
+            method: 'POST',
+            headers: {
+                'Client-ID': credentials.clientId,
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'Content-Type': 'text/plain',
+            },
+            body: query,
+        })
+
+        if (!response.ok) {
+            throw new ConvexError('IGDB_SEARCH_FAILED')
+        }
+
+        const payload = (await response.json()) as unknown
+        if (!Array.isArray(payload)) {
+            throw new ConvexError('IGDB_SEARCH_FAILED')
+        }
+
+        return (payload as IgdbGameSearchResult[]).flatMap((item) => {
+            if (typeof item.id !== 'number' || typeof item.name !== 'string') {
+                return []
+            }
+
+            const releaseDate =
+                typeof item.first_release_date === 'number'
+                    ? toIsoReleaseDate(item.first_release_date)
+                    : null
+            const coverImageUrl =
+                typeof item.cover?.image_id === 'string'
+                    ? toIgdbCoverUrl(item.cover.image_id)
+                    : null
+
+            return [
+                {
+                    igdbId: item.id,
+                    title: item.name,
+                    releaseDate: releaseDate ?? undefined,
+                    coverImageUrl: coverImageUrl ?? undefined,
+                },
+            ]
+        })
     },
 })

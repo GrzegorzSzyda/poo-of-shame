@@ -31,6 +31,7 @@ Zawiera:
 
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
+- podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
 - liste ostatnich 50 gier,
 - edycje gry inline,
 - usuwanie gry z backendowa blokada, jesli gra jest juz uzywana,

@@ -153,6 +153,7 @@ Backend:
 - `updateGame`
 - `deleteGame`
 - `uploadCoverFromUrl`
+- `searchIgdbGames`
 
 Zasady:
 
@@ -161,6 +162,8 @@ Zasady:
 - usuwanie jest blokowane, jesli gra jest uzywana w `libraryEntries` albo
   `userGames`,
 - `userGames` ma indeks `by_game` na potrzeby sprawdzania uzycia gry.
+- formularz dodawania gry ma podpowiedzi z IGDB, ktore uzupelniaja tytul, date
+  premiery i URL okladki; `igdbId` nie jest zapisywane w domenowym rekordzie gry.
 
 ### Admin: role
 

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { api } from '../../../convex/_generated/api'
 import { GameFormFields } from './GameFormFields'
+import { IgdbGameSuggestions } from './IgdbGameSuggestions'
 import {
     type GameFormValues,
     createEmptyGameFormValues,
@@ -16,6 +17,22 @@ export const AddGameForm = () => {
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handlePickIgdbGame = (game: {
+        title: string
+        releaseDate?: string
+        coverImageUrl?: string
+    }) => {
+        setValues({
+            ...values,
+            title: game.title,
+            releasePrecision: game.releaseDate ? 'exact' : 'unknown',
+            releaseDate: game.releaseDate ?? '',
+            coverUrl: game.coverImageUrl ?? '',
+        })
+        setMessage(null)
+        setError(null)
+    }
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault()
@@ -57,6 +74,8 @@ export const AddGameForm = () => {
                         i zapisze go w Convex storage.
                     </p>
                 </div>
+
+                <IgdbGameSuggestions onPick={handlePickIgdbGame} />
 
                 <GameFormFields
                     idPrefix="new-game"

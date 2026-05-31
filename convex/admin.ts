@@ -94,6 +94,25 @@ export const getCurrentAdminAccess = internalQuery({
     },
 })
 
+export const getIgdbCredentialsForCurrentAdmin = internalQuery({
+    args: {},
+    handler: async (ctx) => {
+        await ensureAdmin(ctx)
+
+        const settings = await ctx.db
+            .query('integrationSettings')
+            .withIndex('by_key', (q) => q.eq('key', 'igdb'))
+            .unique()
+
+        if (!settings) return null
+
+        return {
+            clientId: settings.igdbClientId,
+            clientSecret: settings.igdbClientSecret,
+        }
+    },
+})
+
 const toAdminUser = (user: Doc<'appUsers'>) => ({
     _id: user._id,
     subject: user.subject,

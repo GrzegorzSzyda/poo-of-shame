@@ -88,6 +88,10 @@ const getLibraryErrorMessage = (error: unknown, fallback: string) => {
         return 'Nie znaleziono tej gry w twojej kupce.'
     }
 
+    if (message.includes('USER_GAME_IN_USE')) {
+        return 'Nie można usunąć gry, bo ma już powiązane runy albo dostęp.'
+    }
+
     if (message.includes('FORBIDDEN')) {
         return 'Nie możesz edytować tego wpisu.'
     }
@@ -115,11 +119,14 @@ const Cover = ({ game }: { game: { title: string; coverImageUrl?: string } }) =>
 
 const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
     const updateLibraryGame = useMutation(api.library.updateLibraryGame)
+    const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
     const [isEditing, setIsEditing] = useState(false)
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
     const [status, setStatus] = useState<UserGameStatus>(entry.status)
     const [interest, setInterest] = useState(entry.interest)
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
     const showsInterest = shouldShowInterest(status)
 
     const handleCancel = () => {
@@ -145,6 +152,19 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
             setError(getLibraryErrorMessage(error, 'Nie udało się zapisać zmian.'))
         } finally {
             setIsSubmitting(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        setError(null)
+        setIsDeleting(true)
+
+        try {
+            await removeGameFromLibrary({ userGameId: entry._id })
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się usunąć gry z kupki.'))
+        } finally {
+            setIsDeleting(false)
         }
     }
 
@@ -183,14 +203,41 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                         type="button"
                         onClick={() => {
                             setIsEditing((current) => !current)
+                            setIsConfirmingDelete(false)
                             setError(null)
                         }}
                         className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
                     >
                         {isEditing ? 'Zamknij' : 'Edytuj'}
                     </button>
+                    {isConfirmingDelete ? (
+                        <button
+                            type="button"
+                            onClick={() => void handleDelete()}
+                            disabled={isDeleting}
+                            className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-500 px-3 text-sm font-semibold text-red-50 transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60 md:mt-0 md:ml-2"
+                        >
+                            {isDeleting ? 'Usuwanie...' : 'Potwierdź'}
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsConfirmingDelete(true)
+                                setIsEditing(false)
+                                setError(null)
+                            }}
+                            className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-950/60 px-3 text-sm font-medium text-red-200 transition hover:bg-red-900 md:mt-0 md:ml-2"
+                        >
+                            Usuń
+                        </button>
+                    )}
                 </div>
             </div>
+
+            {error && !isEditing ? (
+                <p className="mt-2 text-sm text-red-300">{error}</p>
+            ) : null}
 
             {isEditing ? (
                 <form

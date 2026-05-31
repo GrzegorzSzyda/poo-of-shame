@@ -37,6 +37,8 @@ Zawiera:
 - `interest` tylko dla `wanted`, `owned` i `playing`; statusy zakonczone lub
   porzucone zapisuja `interest: 0`,
 - inline edycje statusu i `interest` na liscie `/library`,
+- usuwanie wpisow z kupki z blokada, jesli istnieja powiazane `gameRuns` albo
+  `gameAccess`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,

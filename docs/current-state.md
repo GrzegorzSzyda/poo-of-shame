@@ -197,6 +197,7 @@ Backend:
 - `listMyLibrary`
 - `addGameToLibrary`
 - `updateLibraryGame`
+- `removeGameFromLibrary`
 
 Zasady:
 
@@ -207,6 +208,8 @@ Zasady:
 - `interest` jest ustawiane suwakiem 0-100 tylko dla statusow `wanted`,
   `owned` i `playing`; dla `completed`, `mastered` i `dropped` zapisuje sie 0,
 - istniejace wpisy `userGames` mozna edytowac inline na liscie,
+- wpisy `userGames` mozna usuwac z potwierdzeniem, dopoki nie maja `gameRuns`
+  albo `gameAccess`,
 - ten slice nie tworzy jeszcze `gameRuns` ani `gameAccess`.
 
 ## Lokalna Praca

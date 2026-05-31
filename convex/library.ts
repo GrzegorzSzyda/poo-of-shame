@@ -203,3 +203,42 @@ export const updateLibraryGame = mutation({
         })
     },
 })
+
+export const removeGameFromLibrary = mutation({
+    args: {
+        userGameId: v.id('userGames'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const [run, access] = await Promise.all([
+            ctx.db
+                .query('gameRuns')
+                .withIndex('by_user_userGame', (q) =>
+                    q.eq('userId', identity.subject).eq('userGameId', args.userGameId),
+                )
+                .first(),
+            ctx.db
+                .query('gameAccess')
+                .withIndex('by_user_userGame', (q) =>
+                    q.eq('userId', identity.subject).eq('userGameId', args.userGameId),
+                )
+                .first(),
+        ])
+
+        if (run || access) {
+            throw new ConvexError('USER_GAME_IN_USE')
+        }
+
+        await ctx.db.delete(args.userGameId)
+    },
+})

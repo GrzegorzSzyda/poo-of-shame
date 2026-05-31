@@ -39,6 +39,7 @@ const CatalogPreview = () => {
         api.games.getCatalogPreview,
         isAuthenticated ? { limit: 10 } : 'skip',
     )
+    const health = useQuery(api.games.getRewriteHealth, isAuthenticated ? {} : 'skip')
 
     return (
         <main className="min-h-screen bg-zinc-950 px-6 py-8 text-zinc-100">
@@ -75,6 +76,30 @@ const CatalogPreview = () => {
                         </p>
                     </div>
                 </div>
+
+                <section className="mt-8">
+                    <h2 className="text-lg font-semibold text-white">Schema V1</h2>
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
+                        {(
+                            [
+                                ['games', 'Katalog'],
+                                ['userGames', 'Kupka'],
+                                ['gameRuns', 'Runy'],
+                                ['gameAccess', 'Dostęp'],
+                            ] as const
+                        ).map(([key, label]) => (
+                            <div
+                                key={key}
+                                className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-4"
+                            >
+                                <p className="text-sm text-zinc-400">{label}</p>
+                                <p className="mt-2 font-medium text-zinc-100">
+                                    {health ? health.tables[key] : 'Ładowanie...'}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
 
                 <section className="mt-8">
                     <h2 className="text-lg font-semibold text-white">

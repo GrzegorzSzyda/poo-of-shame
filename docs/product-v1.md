@@ -53,6 +53,7 @@ The rewrite should split the model more deliberately:
 
 - `games`: shared catalog record.
 - `userGames`: user's relationship to a game.
+- `gameAccess`: user's access/ownership source for a game.
 - `gameRuns`: one playthrough/run of a user game.
 - `gameRunEvents` or `playEvents`: optional future event log for status changes,
   sessions, completions, abandonments, and dates.
@@ -66,37 +67,95 @@ library entry is not enough once the app needs yearly/monthly history.
 
 Shared admin-managed catalog.
 
-- title
-- normalized title
-- release date or year
-- cover image
-- external ids later, for example IGDB
+- `title`
+- `titleNormalized`
+- `releaseStatus: released | upcoming | unknown`
+- `releasePrecision: exact | year | quarter | month | text | unknown`
+- `releaseDate?`
+- `releaseYear?`
+- `releaseQuarter?`
+- `releaseMonth?`
+- `releaseText?`
+- `releaseYearMonth?`
+- `coverImageUrl?`
+- `igdbId?`
+- `createdAt`
+- `updatedAt`
 
 ### `userGames`
 
-User-owned library item.
+User's "kupka" entry for a catalog game. This can mean the user owns the game,
+wants to get it, is currently playing it, has completed it, mastered it, or
+dropped it.
 
-- user id
-- game id
-- ownership/platforms
-- backlog status
-- priority or interest
-- notes
-- timestamps
+- `userId`
+- `gameId`
+- `status: wanted | owned | playing | completed | mastered | dropped`
+- `interest: number` (`0..100`)
+- `note?`
+- `pinnedRunId?`
+- `lastRunId?`
+- `createdAt`
+- `updatedAt`
+
+No `priority` field in V1. `interest` is enough until there is a proven need for
+a second sorting axis.
+
+### `gameAccess`
+
+User's concrete access to a game. This is separate because "having a game" is
+not binary: a game can be owned, available through a subscription, unavailable
+because the subscription lapsed, present on disc, or only wished for.
+
+- `userId`
+- `userGameId`
+- `gameId`
+- `platform: pc | playstation | xbox | switch | mobile | other`
+- `source:
+steam | gog | epic | ea_app | ubisoft_connect | amazon_gaming | ps_store |
+ps_plus | ps_disc | xbox_store | game_pass | switch_eshop | switch_card |
+pc_disc | other`
+- `accessType: owned | subscription | borrowed | wishlist | unknown`
+- `isAvailable`
+- `note?`
+- `createdAt`
+- `updatedAt`
 
 ### `gameRuns`
 
 One run/playthrough.
 
-- user id
-- user game id
-- game id denormalized for querying
-- status: planned, playing, completed, dropped
-- started at
-- finished at
-- rating
-- notes
-- timestamps
+- `userId`
+- `userGameId`
+- `gameId` denormalized for querying
+- `status: planned | playing | completed | mastered | dropped`
+- `label?`
+- `runType?: first_playthrough | replay | new_game_plus | dlc | challenge |
+coop | other`
+- `rating?: number` (`0..100`)
+- `note?`
+- `startedPrecision: exact | year | quarter | month | text | unknown`
+- `startedDate?`
+- `startedYear?`
+- `startedQuarter?`
+- `startedMonth?`
+- `startedText?`
+- `startedYearMonth?`
+- `finishedPrecision: exact | year | quarter | month | text | unknown`
+- `finishedDate?`
+- `finishedYear?`
+- `finishedQuarter?`
+- `finishedMonth?`
+- `finishedText?`
+- `finishedYearMonth?`
+- `createdAt`
+- `updatedAt`
+
+The primary displayed run for a `userGame` is `pinnedRunId` if set, otherwise
+`lastRunId`. Displayed rating follows that selected run.
+
+`libraryEntries` stays in the schema as legacy data until a migration is planned
+and verified.
 
 ## Convex Concerns
 

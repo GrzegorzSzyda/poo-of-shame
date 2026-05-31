@@ -25,3 +25,40 @@ export const getCatalogPreview = query({
         }
     },
 })
+
+export const getRewriteHealth = query({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userId = identity.subject
+
+        const [games, userGames, gameRuns, gameAccess] = await Promise.all([
+            ctx.db.query('games').order('desc').take(5),
+            ctx.db
+                .query('userGames')
+                .withIndex('by_user', (q) => q.eq('userId', userId))
+                .order('desc')
+                .take(5),
+            ctx.db
+                .query('gameRuns')
+                .withIndex('by_user', (q) => q.eq('userId', userId))
+                .order('desc')
+                .take(5),
+            ctx.db
+                .query('gameAccess')
+                .withIndex('by_user', (q) => q.eq('userId', userId))
+                .order('desc')
+                .take(5),
+        ])
+
+        return {
+            userId,
+            tables: {
+                games: games.length,
+                userGames: userGames.length,
+                gameRuns: gameRuns.length,
+                gameAccess: gameAccess.length,
+            },
+        }
+    },
+})

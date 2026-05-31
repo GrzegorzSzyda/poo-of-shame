@@ -34,6 +34,8 @@ Zawiera:
 - tworzenie rekordow `userGames`,
 - blokade duplikatow `userId + gameId`,
 - poczatkowy status i `interest`,
+- `interest` tylko dla `wanted`, `owned` i `playing`; statusy zakonczone lub
+  porzucone zapisuja `interest: 0`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,

@@ -12,6 +12,16 @@ const userGameStatusValidator = v.union(
     v.literal('dropped'),
 )
 
+type UserGameStatus =
+    | 'wanted'
+    | 'owned'
+    | 'playing'
+    | 'completed'
+    | 'mastered'
+    | 'dropped'
+
+const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
+
 const ensureAuthenticated = async (ctx: QueryCtx | MutationCtx) => {
     const identity = await ctx.auth.getUserIdentity()
     if (!identity) {
@@ -157,7 +167,9 @@ export const addGameToLibrary = mutation({
             userId: identity.subject,
             gameId: args.gameId,
             status: args.status,
-            interest: assertInterest(args.interest),
+            interest: interestStatuses.has(args.status)
+                ? assertInterest(args.interest)
+                : 0,
             createdAt: now,
             updatedAt: now,
         })

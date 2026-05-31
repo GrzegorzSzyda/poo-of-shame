@@ -37,6 +37,10 @@ const statusLabels = Object.fromEntries(
     statusOptions.map((option) => [option.value, option.label]),
 ) as Record<UserGameStatus, string>
 
+const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
+
+const shouldShowInterest = (status: UserGameStatus) => interestStatuses.has(status)
+
 const formatRelease = (game: {
     releaseDate?: string
     releaseYearMonth?: string
@@ -95,6 +99,7 @@ const AddToLibraryPanel = () => {
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
+    const showsInterest = shouldShowInterest(status)
     const searchArgs = useMemo(() => {
         const trimmed = searchText.trim()
         return trimmed.length >= 2 ? { searchText: trimmed, limit: 10 } : 'skip'
@@ -123,7 +128,7 @@ const AddToLibraryPanel = () => {
             await addGameToLibrary({
                 gameId: selectedGame._id,
                 status,
-                interest,
+                interest: showsInterest ? interest : 0,
             })
             setMessage(`Dodano: ${selectedGame.title}.`)
             setSelectedGame(null)
@@ -227,7 +232,11 @@ const AddToLibraryPanel = () => {
                     </div>
                 ) : null}
 
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+                <div
+                    className={`grid gap-4 ${
+                        showsInterest ? 'md:grid-cols-[minmax(0,1fr)_14rem]' : ''
+                    }`}
+                >
                     <div className="space-y-1.5">
                         <label htmlFor="library-status" className="text-sm text-zinc-300">
                             Status
@@ -248,29 +257,33 @@ const AddToLibraryPanel = () => {
                         </select>
                     </div>
 
-                    <div className="space-y-1.5">
-                        <div className="flex items-center justify-between gap-3">
-                            <label
-                                htmlFor="library-interest"
-                                className="text-sm text-zinc-300"
-                            >
-                                Zainteresowanie
-                            </label>
-                            <span className="text-sm font-medium text-zinc-100">
-                                {interest}
-                            </span>
+                    {showsInterest ? (
+                        <div className="space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                                <label
+                                    htmlFor="library-interest"
+                                    className="text-sm text-zinc-300"
+                                >
+                                    Zainteresowanie
+                                </label>
+                                <span className="text-sm font-medium text-zinc-100">
+                                    {interest}
+                                </span>
+                            </div>
+                            <input
+                                id="library-interest"
+                                type="range"
+                                min="0"
+                                max="100"
+                                step="1"
+                                value={interest}
+                                onChange={(event) =>
+                                    setInterest(Number(event.target.value))
+                                }
+                                className="h-10 w-full accent-teal-300"
+                            />
                         </div>
-                        <input
-                            id="library-interest"
-                            type="range"
-                            min="0"
-                            max="100"
-                            step="1"
-                            value={interest}
-                            onChange={(event) => setInterest(Number(event.target.value))}
-                            className="h-10 w-full accent-teal-300"
-                        />
-                    </div>
+                    ) : null}
                 </div>
 
                 {selectedGame ? (
@@ -348,9 +361,15 @@ export const LibraryPage = () => {
                                 <p className="self-center text-sm text-zinc-300">
                                     {statusLabels[entry.status]}
                                 </p>
-                                <p className="self-center text-sm text-zinc-400">
-                                    Interest: {entry.interest}
-                                </p>
+                                {shouldShowInterest(entry.status) ? (
+                                    <p className="self-center text-sm text-zinc-400">
+                                        Interest: {entry.interest}
+                                    </p>
+                                ) : (
+                                    <p className="self-center text-sm text-zinc-500">
+                                        Bez priorytetu
+                                    </p>
+                                )}
                             </li>
                         ))}
                     </ul>

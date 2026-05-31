@@ -203,7 +203,8 @@ Zasady:
 - dodanie tworzy rekord `userGames`,
 - duplikaty `userId + gameId` sa blokowane,
 - poczatkowy status jest wybierany w formularzu,
-- `interest` jest ustawiane suwakiem 0-100,
+- `interest` jest ustawiane suwakiem 0-100 tylko dla statusow `wanted`,
+  `owned` i `playing`; dla `completed`, `mastered` i `dropped` zapisuje sie 0,
 - ten slice nie tworzy jeszcze `gameRuns` ani `gameAccess`.
 
 ## Lokalna Praca

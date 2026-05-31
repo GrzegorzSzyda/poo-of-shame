@@ -1,21 +1,41 @@
-# bun-react-tailwind-template
+# Poo of Shame
 
-To install dependencies:
+Fresh rewrite baseline.
+
+The previous application has been moved to `legacy/current-app` so it can be
+referenced without shaping the new implementation.
+
+## Development
+
+Install dependencies:
 
 ```bash
 bun install
 ```
 
-To start a development server:
+Required local environment:
+
+```bash
+CONVEX_DEPLOYMENT=dev:...
+CONVEX_URL=https://...
+CLERK_PUBLISHABLE_KEY=pk_...
+CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-instance.clerk.accounts.dev
+```
+
+After changing Convex auth config, sync the dev deployment:
+
+```bash
+bunx convex dev --once
+```
+
+Run the local dev server:
 
 ```bash
 bun dev
 ```
 
-To run for production:
+Build for production:
 
 ```bash
-bun start
+bun run build
 ```
-
-This project was created using `bun init` in bun v1.3.0. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.

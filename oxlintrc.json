@@ -4,6 +4,6 @@
     "env": {
         "browser": true
     },
-    "ignorePatterns": ["dist/**", "coverage/**"],
+    "ignorePatterns": ["dist/**", "coverage/**", "legacy/**"],
     "rules": {}
 }

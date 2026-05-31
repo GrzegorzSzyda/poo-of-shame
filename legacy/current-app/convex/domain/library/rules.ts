@@ -8,7 +8,12 @@ export const normalizeLibraryPlatforms = (platforms: Platform[]) => {
 }
 
 export const assertValidRating = (rating: number) => {
-    if (!Number.isFinite(rating) || !Number.isInteger(rating) || rating < 0 || rating > 100) {
+    if (
+        !Number.isFinite(rating) ||
+        !Number.isInteger(rating) ||
+        rating < 0 ||
+        rating > 100
+    ) {
         throw new ConvexError(ERRORS.RATING_INVALID)
     }
 }
@@ -48,7 +53,9 @@ export const assertLibraryEntryNotExists = (entry: Doc<'libraryEntries'> | null)
     }
 }
 
-export const requireLibraryEntry = (entry: Doc<'libraryEntries'> | null): Doc<'libraryEntries'> => {
+export const requireLibraryEntry = (
+    entry: Doc<'libraryEntries'> | null,
+): Doc<'libraryEntries'> => {
     if (!entry) {
         throw new ConvexError(ERRORS.LIB_ENTRY_NOT_FOUND)
     }

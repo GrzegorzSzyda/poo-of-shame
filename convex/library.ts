@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { ensureAuthUserId } from './common/access'
 import {
+    PROGRESS_STATUS_VALUES,
     assertLibraryEntryNotExists,
     assertLibraryEntryOwner,
     assertValidRating,
@@ -34,6 +35,34 @@ export const listMyLibrary = query({
             userId,
             args.paginationOpts,
         )
+    },
+})
+
+export const getMyLibraryStats = query({
+    args: {},
+    handler: async (ctx) => {
+        const userId = await ensureAuthUserId(ctx)
+
+        const counts = await Promise.all(
+            PROGRESS_STATUS_VALUES.map(async (status) => {
+                const entries = await ctx.db
+                    .query('libraryEntries')
+                    .withIndex('by_user_progress', (q) =>
+                        q.eq('userId', userId).eq('progressStatus', status),
+                    )
+                    .collect()
+
+                return [status, entries.length] as const
+            }),
+        )
+
+        const byProgressStatus = Object.fromEntries(counts)
+        const total = counts.reduce((sum, [, count]) => sum + count, 0)
+
+        return {
+            total,
+            byProgressStatus,
+        }
     },
 })
 

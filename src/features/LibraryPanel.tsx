@@ -8,7 +8,7 @@ import {
     TrophyIcon,
     XCircleIcon,
 } from '@phosphor-icons/react'
-import { useMutation, usePaginatedQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery, useQuery } from 'convex/react'
 import { cx } from 'cva'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '~/components/Button'
@@ -88,6 +88,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
     const { success, error: showError } = useToast()
     const { games } = useCachedLibraryGames(authReady)
     const addToLibrary = useMutation(api.library.addToLibrary)
+    const libraryStats = useQuery(api.library.getMyLibraryStats, authReady ? {} : 'skip')
 
     const [addingGameId, setAddingGameId] = useState<string | null>(null)
     const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false)
@@ -289,6 +290,9 @@ export const LibraryPanel = ({ authReady }: Props) => {
                             onAdd={(game) => void handleAddFromSearch(game)}
                         />
                     </div>
+                    <div className="text-text/70 mt-1 text-sm">
+                        Łącznie gier: {libraryStats?.total ?? 0}
+                    </div>
                 </div>
 
                 <div
@@ -298,6 +302,7 @@ export const LibraryPanel = ({ authReady }: Props) => {
                     )}
                 >
                     <ProgressStatusPills
+                        counts={libraryStats?.byProgressStatus}
                         id="library-status-tabs"
                         value={activeStatus}
                         onChange={setActiveStatus}

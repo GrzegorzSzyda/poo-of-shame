@@ -30,6 +30,7 @@ const statusIcon = (status: ProgressStatus) => {
 }
 
 type ProgressStatusPillsProps = {
+    counts?: Partial<Record<ProgressStatus, number>>
     value: ProgressStatus
     onChange: (status: ProgressStatus) => void
     id?: string
@@ -38,6 +39,7 @@ type ProgressStatusPillsProps = {
 }
 
 export const ProgressStatusPills = ({
+    counts,
     value,
     onChange,
     id,
@@ -83,6 +85,9 @@ export const ProgressStatusPills = ({
                     >
                         <StatusIcon className="h-3.5 w-3.5" />
                         {progressStatusLabel(status)}
+                        <span className="text-sm text-current/80 tabular-nums">
+                            {counts?.[status] ?? 0}
+                        </span>
                     </span>
                 </button>
             )

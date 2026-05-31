@@ -1,5 +1,6 @@
 import { useMutation } from 'convex/react'
 import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
 import { api } from '../../../convex/_generated/api'
 
 type IgdbSettings = {
@@ -18,7 +19,7 @@ export const IgdbSettingsForm = ({ igdb }: { igdb?: IgdbSettings }) => {
         setClientId(igdb.clientId)
     }, [igdb])
 
-    const handleSubmit = async (event: React.FormEvent) => {
+    const handleSubmit = async (event: FormEvent) => {
         event.preventDefault()
         setIsSaving(true)
         try {

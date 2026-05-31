@@ -1,6 +1,6 @@
 import { ConvexError, v } from 'convex/values'
 import type { Doc } from './_generated/dataModel'
-import { mutation, query } from './_generated/server'
+import { internalQuery, mutation, query } from './_generated/server'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 
 type Identity = {
@@ -75,13 +75,24 @@ const canManageAdmin = async (ctx: QueryCtx | MutationCtx, identity: Identity) =
     return appUser?.role === 'admin'
 }
 
-const ensureAdmin = async (ctx: QueryCtx | MutationCtx) => {
+export const ensureAdmin = async (ctx: QueryCtx | MutationCtx) => {
     const identity = await requireIdentity(ctx)
     if (!(await canManageAdmin(ctx, identity))) {
         throw new ConvexError('FORBIDDEN')
     }
     return identity
 }
+
+export const getCurrentAdminAccess = internalQuery({
+    args: {},
+    handler: async (ctx) => {
+        const identity = await requireIdentity(ctx)
+        return {
+            canManage: await canManageAdmin(ctx, identity),
+            userId: identity.subject,
+        }
+    },
+})
 
 const toAdminUser = (user: Doc<'appUsers'>) => ({
     _id: user._id,

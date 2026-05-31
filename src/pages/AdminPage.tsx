@@ -1,5 +1,6 @@
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
+import { AddGameForm } from '../features/admin/AddGameForm'
 import { IgdbSettingsForm } from '../features/admin/IgdbSettingsForm'
 import { UserRolesPanel } from '../features/admin/UserRolesPanel'
 
@@ -38,6 +39,7 @@ export const AdminPage = () => {
                     backendowego sprawdzenia w mutacjach.
                 </p>
             </div>
+            <AddGameForm />
             <UserRolesPanel users={panel?.users} />
             <IgdbSettingsForm igdb={panel?.igdb} />
         </section>

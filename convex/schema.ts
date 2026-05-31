@@ -25,12 +25,6 @@ const progressStatusValidator = v.union(
     v.literal('dropped'),
 )
 
-const releaseStatusValidator = v.union(
-    v.literal('released'),
-    v.literal('upcoming'),
-    v.literal('unknown'),
-)
-
 const datePrecisionValidator = v.union(
     v.literal('exact'),
     v.literal('year'),
@@ -108,8 +102,8 @@ export default defineSchema({
     games: defineTable({
         title: v.string(),
         titleNormalized: v.string(),
-        releaseStatus: v.optional(releaseStatusValidator),
         releasePrecision: v.optional(datePrecisionValidator),
+        releaseKey: v.optional(v.string()),
         releaseDate: v.optional(v.string()),
         releaseYear: v.optional(v.number()),
         releaseQuarter: v.optional(v.number()),
@@ -117,13 +111,12 @@ export default defineSchema({
         releaseText: v.optional(v.string()),
         releaseYearMonth: v.optional(v.string()),
         coverImageUrl: v.optional(v.string()),
-        igdbId: v.optional(v.number()),
         createdAt: v.optional(v.number()),
         updatedAt: v.optional(v.number()),
     })
         .index('by_titleDate', ['titleNormalized', 'releaseDate'])
         .index('by_titleNormalized', ['titleNormalized'])
-        .index('by_igdbId', ['igdbId'])
+        .index('by_titleReleaseKey', ['titleNormalized', 'releaseKey'])
         .index('by_releaseYear', ['releaseYear']),
     libraryEntries: defineTable({
         userId: v.string(),

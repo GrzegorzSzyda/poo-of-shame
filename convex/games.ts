@@ -1,6 +1,19 @@
 import { ConvexError, v } from 'convex/values'
-import { query } from './_generated/server'
-import type { QueryCtx } from './_generated/server'
+import { internal } from './_generated/api'
+import { action, mutation, query } from './_generated/server'
+import type { MutationCtx, QueryCtx } from './_generated/server'
+import { ensureAdmin } from './admin'
+
+const MAX_COVER_IMAGE_SIZE_BYTES = 8 * 1024 * 1024
+
+const releasePrecisionValidator = v.union(
+    v.literal('exact'),
+    v.literal('year'),
+    v.literal('quarter'),
+    v.literal('month'),
+    v.literal('text'),
+    v.literal('unknown'),
+)
 
 const ensureAuthenticated = async (ctx: QueryCtx) => {
     const identity = await ctx.auth.getUserIdentity()
@@ -8,6 +21,162 @@ const ensureAuthenticated = async (ctx: QueryCtx) => {
         throw new ConvexError('UNAUTHORIZED')
     }
     return identity
+}
+
+const normalizeGameTitle = (title: string) =>
+    title.trim().toLowerCase().replace(/\s+/g, ' ')
+
+const normalizeReleaseText = (value: string) =>
+    value.trim().toLowerCase().replace(/\s+/g, ' ')
+
+const toYearMonth = (year: number, month: number) =>
+    `${year}-${String(month).padStart(2, '0')}`
+
+const assertYear = (year: number | undefined) => {
+    if (!Number.isInteger(year) || year < 1950 || year > 2200) {
+        throw new ConvexError('RELEASE_YEAR_INVALID')
+    }
+    return year
+}
+
+const assertQuarter = (quarter: number | undefined) => {
+    if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+        throw new ConvexError('RELEASE_QUARTER_INVALID')
+    }
+    return quarter
+}
+
+const assertMonth = (month: number | undefined) => {
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+        throw new ConvexError('RELEASE_MONTH_INVALID')
+    }
+    return month
+}
+
+const isValidIsoDate = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+    const parsed = new Date(`${value}T00:00:00.000Z`)
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
+const buildReleaseFields = (input: {
+    releasePrecision: ReleasePrecision
+    releaseDate?: string
+    releaseYear?: number
+    releaseQuarter?: number
+    releaseMonth?: number
+    releaseText?: string
+}) => {
+    switch (input.releasePrecision) {
+        case 'exact': {
+            const releaseDate = input.releaseDate?.trim() ?? ''
+            if (!isValidIsoDate(releaseDate)) {
+                throw new ConvexError('RELEASE_DATE_INVALID')
+            }
+            const releaseYear = Number(releaseDate.slice(0, 4))
+            const releaseMonth = Number(releaseDate.slice(5, 7))
+            return {
+                releaseDate,
+                releaseYear,
+                releaseMonth,
+                releaseYearMonth: toYearMonth(releaseYear, releaseMonth),
+                releaseKey: `exact:${releaseDate}`,
+            }
+        }
+        case 'year': {
+            const releaseYear = assertYear(input.releaseYear)
+            return {
+                releaseYear,
+                releaseKey: `year:${releaseYear}`,
+            }
+        }
+        case 'quarter': {
+            const releaseYear = assertYear(input.releaseYear)
+            const releaseQuarter = assertQuarter(input.releaseQuarter)
+            return {
+                releaseYear,
+                releaseQuarter,
+                releaseKey: `quarter:${releaseYear}-Q${releaseQuarter}`,
+            }
+        }
+        case 'month': {
+            const releaseYear = assertYear(input.releaseYear)
+            const releaseMonth = assertMonth(input.releaseMonth)
+            return {
+                releaseYear,
+                releaseMonth,
+                releaseYearMonth: toYearMonth(releaseYear, releaseMonth),
+                releaseKey: `month:${toYearMonth(releaseYear, releaseMonth)}`,
+            }
+        }
+        case 'text': {
+            const releaseText = input.releaseText?.trim() ?? ''
+            const normalizedText = normalizeReleaseText(releaseText)
+            if (normalizedText.length === 0) {
+                throw new ConvexError('RELEASE_TEXT_REQUIRED')
+            }
+            return {
+                releaseText,
+                releaseKey: `text:${normalizedText}`,
+            }
+        }
+        case 'unknown':
+            return {
+                releaseKey: 'unknown',
+            }
+    }
+}
+
+type ReleasePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
+
+type ReleaseFields = ReturnType<typeof buildReleaseFields>
+
+const findExistingGame = async (
+    ctx: QueryCtx | MutationCtx,
+    titleNormalized: string,
+    releasePrecision: ReleasePrecision,
+    releaseFields: ReleaseFields,
+) => {
+    const byReleaseKey = await ctx.db
+        .query('games')
+        .withIndex('by_titleReleaseKey', (q) =>
+            q
+                .eq('titleNormalized', titleNormalized)
+                .eq('releaseKey', releaseFields.releaseKey),
+        )
+        .unique()
+
+    if (byReleaseKey) return byReleaseKey
+
+    const legacyCandidates = await ctx.db
+        .query('games')
+        .withIndex('by_titleNormalized', (q) => q.eq('titleNormalized', titleNormalized))
+        .collect()
+
+    return (
+        legacyCandidates.find((game) => {
+            if (game.releaseKey !== undefined) return false
+
+            if ('releaseDate' in releaseFields && releaseFields.releaseDate) {
+                return game.releaseDate === releaseFields.releaseDate
+            }
+
+            if (
+                (releasePrecision === 'year' ||
+                    releasePrecision === 'quarter' ||
+                    releasePrecision === 'month') &&
+                'releaseYear' in releaseFields
+            ) {
+                return game.releaseYear === releaseFields.releaseYear
+            }
+
+            if (releasePrecision === 'unknown') {
+                return game.releaseDate === undefined && game.releaseYear === undefined
+            }
+
+            return false
+        }) ?? null
+    )
 }
 
 export const getCatalogPreview = query({
@@ -60,5 +229,124 @@ export const getRewriteHealth = query({
                 gameAccess: gameAccess.length,
             },
         }
+    },
+})
+
+export const createGame = mutation({
+    args: {
+        title: v.string(),
+        releasePrecision: releasePrecisionValidator,
+        releaseDate: v.optional(v.string()),
+        releaseYear: v.optional(v.number()),
+        releaseQuarter: v.optional(v.number()),
+        releaseMonth: v.optional(v.number()),
+        releaseText: v.optional(v.string()),
+        coverImageUrl: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+
+        const title = args.title.trim()
+        const titleNormalized = normalizeGameTitle(title)
+        if (titleNormalized.length === 0) {
+            throw new ConvexError('TITLE_REQUIRED')
+        }
+
+        const releaseFields = buildReleaseFields(args)
+        const existing = await findExistingGame(
+            ctx,
+            titleNormalized,
+            args.releasePrecision,
+            releaseFields,
+        )
+
+        if (existing) {
+            throw new ConvexError('GAME_ALREADY_EXISTS')
+        }
+
+        const now = Date.now()
+        return await ctx.db.insert('games', {
+            title,
+            titleNormalized,
+            releasePrecision: args.releasePrecision,
+            ...releaseFields,
+            coverImageUrl:
+                args.coverImageUrl && args.coverImageUrl.trim().length > 0
+                    ? args.coverImageUrl.trim()
+                    : undefined,
+            createdAt: now,
+            updatedAt: now,
+        })
+    },
+})
+
+const parseCoverSourceUrl = (sourceUrl: string) => {
+    const trimmed = sourceUrl.trim()
+    if (trimmed.length === 0) {
+        throw new ConvexError('COVER_URL_INVALID')
+    }
+
+    try {
+        const parsed = new URL(trimmed)
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            throw new ConvexError('COVER_URL_INVALID')
+        }
+        return parsed
+    } catch {
+        throw new ConvexError('COVER_URL_INVALID')
+    }
+}
+
+const parseContentLength = (value: string | null) => {
+    if (!value) return null
+    const parsed = Number(value)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
+}
+
+export const uploadCoverFromUrl = action({
+    args: {
+        sourceUrl: v.string(),
+    },
+    handler: async (ctx, args) => {
+        const adminAccess = await ctx.runQuery(internal.admin.getCurrentAdminAccess, {})
+        if (!adminAccess.canManage) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const sourceUrl = parseCoverSourceUrl(args.sourceUrl)
+        let response: Response
+
+        try {
+            response = await fetch(sourceUrl)
+        } catch {
+            throw new ConvexError('COVER_FETCH_FAILED')
+        }
+
+        if (!response.ok) {
+            throw new ConvexError('COVER_FETCH_FAILED')
+        }
+
+        const contentType = response.headers.get('content-type') ?? ''
+        if (!contentType.startsWith('image/')) {
+            throw new ConvexError('COVER_NOT_IMAGE')
+        }
+
+        const contentLength = parseContentLength(response.headers.get('content-length'))
+        if (contentLength !== null && contentLength > MAX_COVER_IMAGE_SIZE_BYTES) {
+            throw new ConvexError('COVER_TOO_LARGE')
+        }
+
+        const blob = await response.blob()
+        if (blob.size > MAX_COVER_IMAGE_SIZE_BYTES) {
+            throw new ConvexError('COVER_TOO_LARGE')
+        }
+
+        const storageId = await ctx.storage.store(blob)
+        const storageUrl = await ctx.storage.getUrl(storageId)
+        if (!storageUrl) {
+            throw new ConvexError('COVER_UPLOAD_FAILED')
+        }
+
+        return storageUrl
     },
 })

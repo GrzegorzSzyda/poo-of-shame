@@ -69,8 +69,8 @@ Shared admin-managed catalog.
 
 - `title`
 - `titleNormalized`
-- `releaseStatus: released | upcoming | unknown`
 - `releasePrecision: exact | year | quarter | month | text | unknown`
+- `releaseKey`
 - `releaseDate?`
 - `releaseYear?`
 - `releaseQuarter?`
@@ -78,7 +78,6 @@ Shared admin-managed catalog.
 - `releaseText?`
 - `releaseYearMonth?`
 - `coverImageUrl?`
-- `igdbId?`
 - `createdAt`
 - `updatedAt`
 

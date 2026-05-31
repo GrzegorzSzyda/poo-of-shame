@@ -36,6 +36,7 @@ Zawiera:
 - poczatkowy status i `interest`,
 - `interest` tylko dla `wanted`, `owned` i `playing`; statusy zakonczone lub
   porzucone zapisuja `interest: 0`,
+- inline edycje statusu i `interest` na liscie `/library`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -116,10 +117,8 @@ PORT=3002 bun dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to zarzadzanie statusem gry w kupce albo pierwszy
-kontrolowany flow runow:
+Najlepszy kolejny krok to pierwszy kontrolowany flow runow:
 
-- edycja statusu i `interest` dla istniejacego `userGames`,
 - decyzja, kiedy zmiana statusu tworzy albo aktualizuje `gameRuns`,
 - podstawowe dodanie pierwszego runu dla gry w bibliotece.
 

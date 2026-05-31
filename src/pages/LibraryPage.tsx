@@ -24,6 +24,21 @@ type CatalogSearchGame = {
     isInLibrary: boolean
 }
 
+type LibraryEntry = {
+    _id: Id<'userGames'>
+    status: UserGameStatus
+    interest: number
+    game: {
+        title: string
+        releaseDate?: string
+        releaseYear?: number
+        releaseQuarter?: number
+        releaseYearMonth?: string
+        releaseText?: string
+        coverImageUrl?: string
+    } | null
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -69,6 +84,14 @@ const getLibraryErrorMessage = (error: unknown, fallback: string) => {
         return 'Nie znaleziono tej gry w katalogu.'
     }
 
+    if (message.includes('USER_GAME_NOT_FOUND')) {
+        return 'Nie znaleziono tej gry w twojej kupce.'
+    }
+
+    if (message.includes('FORBIDDEN')) {
+        return 'Nie możesz edytować tego wpisu.'
+    }
+
     if (message.includes('INTEREST_INVALID')) {
         return 'Zainteresowanie musi być w zakresie 0-100.'
     }
@@ -89,6 +112,171 @@ const Cover = ({ game }: { game: { title: string; coverImageUrl?: string } }) =>
             brak
         </div>
     )
+
+const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
+    const updateLibraryGame = useMutation(api.library.updateLibraryGame)
+    const [isEditing, setIsEditing] = useState(false)
+    const [status, setStatus] = useState<UserGameStatus>(entry.status)
+    const [interest, setInterest] = useState(entry.interest)
+    const [error, setError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const showsInterest = shouldShowInterest(status)
+
+    const handleCancel = () => {
+        setStatus(entry.status)
+        setInterest(entry.interest)
+        setError(null)
+        setIsEditing(false)
+    }
+
+    const handleSubmit = async (event: FormEvent) => {
+        event.preventDefault()
+        setError(null)
+        setIsSubmitting(true)
+
+        try {
+            await updateLibraryGame({
+                userGameId: entry._id,
+                status,
+                interest: showsInterest ? interest : 0,
+            })
+            setIsEditing(false)
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się zapisać zmian.'))
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    return (
+        <li className="bg-zinc-900/50 px-4 py-3">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_8rem_8rem]">
+                {entry.game ? (
+                    <div className="flex min-w-0 gap-3">
+                        <Cover game={entry.game} />
+                        <div className="min-w-0 self-center">
+                            <p className="truncate text-sm font-medium text-zinc-100">
+                                {entry.game.title}
+                            </p>
+                            <p className="mt-1 text-xs text-zinc-400">
+                                {formatRelease(entry.game)}
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-sm text-red-300">
+                        Brak rekordu gry w katalogu.
+                    </div>
+                )}
+                <p className="self-center text-sm text-zinc-300">
+                    {statusLabels[entry.status]}
+                </p>
+                {shouldShowInterest(entry.status) ? (
+                    <p className="self-center text-sm text-zinc-400">
+                        Interest: {entry.interest}
+                    </p>
+                ) : (
+                    <p className="self-center text-sm text-zinc-500">Bez priorytetu</p>
+                )}
+                <div className="self-center md:text-right">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsEditing((current) => !current)
+                            setError(null)
+                        }}
+                        className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
+                    >
+                        {isEditing ? 'Zamknij' : 'Edytuj'}
+                    </button>
+                </div>
+            </div>
+
+            {isEditing ? (
+                <form
+                    onSubmit={(event) => void handleSubmit(event)}
+                    className="mt-3 space-y-3 rounded-md border border-zinc-800 bg-zinc-950/60 p-3"
+                >
+                    <div
+                        className={`grid gap-4 ${
+                            showsInterest ? 'md:grid-cols-[minmax(0,1fr)_14rem]' : ''
+                        }`}
+                    >
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor={`library-edit-status-${entry._id}`}
+                                className="text-sm text-zinc-300"
+                            >
+                                Status
+                            </label>
+                            <select
+                                id={`library-edit-status-${entry._id}`}
+                                value={status}
+                                onChange={(event) =>
+                                    setStatus(event.target.value as UserGameStatus)
+                                }
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                            >
+                                {statusOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {showsInterest ? (
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <label
+                                        htmlFor={`library-edit-interest-${entry._id}`}
+                                        className="text-sm text-zinc-300"
+                                    >
+                                        Zainteresowanie
+                                    </label>
+                                    <span className="text-sm font-medium text-zinc-100">
+                                        {interest}
+                                    </span>
+                                </div>
+                                <input
+                                    id={`library-edit-interest-${entry._id}`}
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={interest}
+                                    onChange={(event) =>
+                                        setInterest(Number(event.target.value))
+                                    }
+                                    className="h-10 w-full accent-teal-300"
+                                />
+                            </div>
+                        ) : null}
+                    </div>
+
+                    {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-teal-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
+                        >
+                            Anuluj
+                        </button>
+                    </div>
+                </form>
+            ) : null}
+        </li>
+    )
+}
 
 const AddToLibraryPanel = () => {
     const addGameToLibrary = useMutation(api.library.addGameToLibrary)
@@ -337,40 +525,7 @@ export const LibraryPage = () => {
                 ) : library.length > 0 ? (
                     <ul className="divide-y divide-zinc-800">
                         {library.map((entry) => (
-                            <li
-                                key={entry._id}
-                                className="grid gap-3 bg-zinc-900/50 px-4 py-3 md:grid-cols-[minmax(0,1fr)_9rem_8rem]"
-                            >
-                                {entry.game ? (
-                                    <div className="flex min-w-0 gap-3">
-                                        <Cover game={entry.game} />
-                                        <div className="min-w-0 self-center">
-                                            <p className="truncate text-sm font-medium text-zinc-100">
-                                                {entry.game.title}
-                                            </p>
-                                            <p className="mt-1 text-xs text-zinc-400">
-                                                {formatRelease(entry.game)}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-sm text-red-300">
-                                        Brak rekordu gry w katalogu.
-                                    </div>
-                                )}
-                                <p className="self-center text-sm text-zinc-300">
-                                    {statusLabels[entry.status]}
-                                </p>
-                                {shouldShowInterest(entry.status) ? (
-                                    <p className="self-center text-sm text-zinc-400">
-                                        Interest: {entry.interest}
-                                    </p>
-                                ) : (
-                                    <p className="self-center text-sm text-zinc-500">
-                                        Bez priorytetu
-                                    </p>
-                                )}
-                            </li>
+                            <LibraryEntryRow key={entry._id} entry={entry} />
                         ))}
                     </ul>
                 ) : (

@@ -175,3 +175,31 @@ export const addGameToLibrary = mutation({
         })
     },
 })
+
+export const updateLibraryGame = mutation({
+    args: {
+        userGameId: v.id('userGames'),
+        status: userGameStatusValidator,
+        interest: v.number(),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        await ctx.db.patch(args.userGameId, {
+            status: args.status,
+            interest: interestStatuses.has(args.status)
+                ? assertInterest(args.interest)
+                : 0,
+            updatedAt: Date.now(),
+        })
+    },
+})

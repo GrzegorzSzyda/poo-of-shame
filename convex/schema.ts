@@ -102,6 +102,8 @@ const accessTypeValidator = v.union(
     v.literal('unknown'),
 )
 
+const appUserRoleValidator = v.union(v.literal('user'), v.literal('admin'))
+
 export default defineSchema({
     games: defineTable({
         title: v.string(),
@@ -210,4 +212,26 @@ export default defineSchema({
         .index('by_user_startedYearMonth', ['userId', 'startedYearMonth'])
         .index('by_user_finishedYear', ['userId', 'finishedYear'])
         .index('by_user_finishedYearMonth', ['userId', 'finishedYearMonth']),
+    appUsers: defineTable({
+        subject: v.string(),
+        tokenIdentifier: v.string(),
+        issuer: v.string(),
+        email: v.optional(v.string()),
+        name: v.optional(v.string()),
+        role: appUserRoleValidator,
+        lastSeenAt: v.number(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index('by_subject', ['subject'])
+        .index('by_tokenIdentifier', ['tokenIdentifier'])
+        .index('by_role', ['role']),
+    integrationSettings: defineTable({
+        key: v.literal('igdb'),
+        igdbClientId: v.string(),
+        igdbClientSecret: v.string(),
+        updatedByUserId: v.string(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    }).index('by_key', ['key']),
 })

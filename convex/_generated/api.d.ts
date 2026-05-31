@@ -8,9 +8,11 @@
  * @module
  */
 import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server'
+import type * as admin from '../admin.js'
 import type * as games from '../games.js'
 
 declare const fullApi: ApiFromModules<{
+    admin: typeof admin
     games: typeof games
 }>
 

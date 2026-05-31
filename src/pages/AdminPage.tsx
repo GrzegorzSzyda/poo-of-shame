@@ -1,6 +1,6 @@
 import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
-import { AddGameForm } from '../features/admin/AddGameForm'
+import { GamesAdminPanel } from '../features/admin/GamesAdminPanel'
 import { IgdbSettingsForm } from '../features/admin/IgdbSettingsForm'
 import { UserRolesPanel } from '../features/admin/UserRolesPanel'
 import { type AdminRoute, navigate } from '../routing'
@@ -78,7 +78,7 @@ export const AdminPage = ({ route }: { route: AdminRoute }) => {
                     />
                 ))}
             </nav>
-            {route === 'games' ? <AddGameForm /> : null}
+            {route === 'games' ? <GamesAdminPanel /> : null}
             {route === 'users' ? <UserRolesPanel users={panel?.users} /> : null}
             {route === 'integrations' ? <IgdbSettingsForm igdb={panel?.igdb} /> : null}
         </section>

@@ -280,6 +280,107 @@ export const createGame = mutation({
     },
 })
 
+export const listAdminGames = query({
+    args: {
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+
+        const limit = Math.min(Math.max(args.limit ?? 50, 1), 100)
+        return await ctx.db.query('games').order('desc').take(limit)
+    },
+})
+
+export const updateGame = mutation({
+    args: {
+        gameId: v.id('games'),
+        title: v.string(),
+        releasePrecision: releasePrecisionValidator,
+        releaseDate: v.optional(v.string()),
+        releaseYear: v.optional(v.number()),
+        releaseQuarter: v.optional(v.number()),
+        releaseMonth: v.optional(v.number()),
+        releaseText: v.optional(v.string()),
+        coverImageUrl: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+
+        const existingGame = await ctx.db.get(args.gameId)
+        if (!existingGame) {
+            throw new ConvexError('GAME_NOT_FOUND')
+        }
+
+        const title = args.title.trim()
+        const titleNormalized = normalizeGameTitle(title)
+        if (titleNormalized.length === 0) {
+            throw new ConvexError('TITLE_REQUIRED')
+        }
+
+        const releaseFields = buildReleaseFields(args)
+        const duplicate = await findExistingGame(
+            ctx,
+            titleNormalized,
+            args.releasePrecision,
+            releaseFields,
+        )
+
+        if (duplicate && duplicate._id !== args.gameId) {
+            throw new ConvexError('GAME_ALREADY_EXISTS')
+        }
+
+        await ctx.db.patch(args.gameId, {
+            title,
+            titleNormalized,
+            releasePrecision: args.releasePrecision,
+            releaseDate: undefined,
+            releaseYear: undefined,
+            releaseQuarter: undefined,
+            releaseMonth: undefined,
+            releaseText: undefined,
+            releaseYearMonth: undefined,
+            ...releaseFields,
+            coverImageUrl:
+                args.coverImageUrl && args.coverImageUrl.trim().length > 0
+                    ? args.coverImageUrl.trim()
+                    : undefined,
+            updatedAt: Date.now(),
+        })
+    },
+})
+
+export const deleteGame = mutation({
+    args: {
+        gameId: v.id('games'),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+
+        const game = await ctx.db.get(args.gameId)
+        if (!game) {
+            throw new ConvexError('GAME_NOT_FOUND')
+        }
+
+        const [legacyEntry, userGame] = await Promise.all([
+            ctx.db
+                .query('libraryEntries')
+                .withIndex('by_game', (q) => q.eq('gameId', args.gameId))
+                .first(),
+            ctx.db
+                .query('userGames')
+                .withIndex('by_game', (q) => q.eq('gameId', args.gameId))
+                .first(),
+        ])
+
+        if (legacyEntry || userGame) {
+            throw new ConvexError('GAME_IN_USE')
+        }
+
+        await ctx.db.delete(args.gameId)
+    },
+})
+
 const parseCoverSourceUrl = (sourceUrl: string) => {
     const trimmed = sourceUrl.trim()
     if (trimmed.length === 0) {

@@ -1,22 +1,6 @@
-# Convex Backend
+# Convex
 
-Dokumentacja API (PL): `convex/API.md`
+This folder contains the new minimal Convex backend for the rewrite.
 
-Przydatne komendy:
-
-```bash
-npx convex dev
-npx convex deploy
-npx convex env list
-```
-
-Dokumentacja Convex:
-
-- https://docs.convex.dev/functions
-- https://docs.convex.dev/auth
-
-## Checklist deploy
-
-- `CLERK_JWT_ISSUER_DOMAIN` ustawione dla danego deploymentu.
-- `GAMES_ADMIN_TOKEN_IDENTIFIERS` ustawione i niepuste dla danego deploymentu (`dev`, `prod`).
-- Po zmianach auth/schema uruchomione `npx convex dev` lub `npx convex deploy`.
+The schema is intentionally compatible with the existing deployment data. Avoid
+destructive schema changes until the migration plan is written and verified.

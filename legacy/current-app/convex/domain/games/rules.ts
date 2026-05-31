@@ -1,6 +1,6 @@
 import { ConvexError } from 'convex/values'
 import { ERRORS } from '../../common/errors'
-import { getMaxReleaseDate, MIN_RELEASE_DATE } from './constants'
+import { MIN_RELEASE_DATE, getMaxReleaseDate } from './constants'
 import type { GameDoc, GameId } from './types'
 
 export const normalizeGameTitle = (title: string) =>

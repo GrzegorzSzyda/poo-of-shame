@@ -1,29 +1,6 @@
 import { defineSchema, defineTable } from 'convex/server'
 import { v } from 'convex/values'
-
-const platformValidator = v.union(
-    v.literal('ps_disc'),
-    v.literal('ps_store'),
-    v.literal('ps_plus'),
-    v.literal('pc_disc'),
-    v.literal('steam'),
-    v.literal('epic'),
-    v.literal('ea_app'),
-    v.literal('gog'),
-    v.literal('amazon_gaming'),
-    v.literal('ubisoft_connect'),
-    v.literal('xbox'),
-    v.literal('switch'),
-    v.literal('other'),
-)
-
-const progressStatusValidator = v.union(
-    v.literal('backlog'),
-    v.literal('playing'),
-    v.literal('completed'),
-    v.literal('done'),
-    v.literal('dropped'),
-)
+import { platformValidator, progressStatusValidator } from './domain/library'
 
 export default defineSchema({
     games: defineTable({

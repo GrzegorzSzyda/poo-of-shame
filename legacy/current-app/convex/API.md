@@ -100,11 +100,11 @@ Przykład:
 import { usePaginatedQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 
-const { results: games, status, loadMore } = usePaginatedQuery(
-    api.games.list,
-    {},
-    { initialNumItems: 24 },
-)
+const {
+    results: games,
+    status,
+    loadMore,
+} = usePaginatedQuery(api.games.list, {}, { initialNumItems: 24 })
 ```
 
 ### `games.canManage` (query)
@@ -272,11 +272,11 @@ Przykład:
 import { usePaginatedQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 
-const { results: myLibrary, status, loadMore } = usePaginatedQuery(
-    api.library.listMyLibrary,
-    {},
-    { initialNumItems: 50 },
-)
+const {
+    results: myLibrary,
+    status,
+    loadMore,
+} = usePaginatedQuery(api.library.listMyLibrary, {}, { initialNumItems: 50 })
 ```
 
 ### `library.listMyLibraryFiltered` (query)
@@ -308,7 +308,11 @@ Przykład:
 import { usePaginatedQuery } from 'convex/react'
 import { api } from '../convex/_generated/api'
 
-const { results: filteredLibrary, status, loadMore } = usePaginatedQuery(
+const {
+    results: filteredLibrary,
+    status,
+    loadMore,
+} = usePaginatedQuery(
     api.library.listMyLibraryFiltered,
     {
         progressStatus: 'playing',

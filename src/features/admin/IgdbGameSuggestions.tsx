@@ -1,6 +1,7 @@
 import { useAction } from 'convex/react'
 import { useEffect, useState } from 'react'
 import { api } from '../../../convex/_generated/api'
+import { navigate } from '../../routing'
 
 type IgdbGameSuggestion = {
     igdbId: number
@@ -13,9 +14,31 @@ const MIN_SEARCH_LENGTH = 2
 
 const formatReleaseDate = (releaseDate?: string) => releaseDate ?? 'brak daty'
 
+const getIgdbSearchErrorMessage = (error: unknown) => {
+    const message = error instanceof Error ? error.message : ''
+
+    if (message.includes('IGDB_NOT_CONFIGURED')) {
+        return 'Najpierw zapisz konfigurację IGDB w integracjach.'
+    }
+
+    if (message.includes('IGDB_AUTH_FAILED')) {
+        return 'Nie udało się zalogować do IGDB. Sprawdź client ID i secret.'
+    }
+
+    if (message.includes('IGDB_SEARCH_FAILED')) {
+        return 'Nie udało się pobrać sugestii z IGDB.'
+    }
+
+    return error instanceof Error
+        ? error.message
+        : 'Nie udało się pobrać sugestii z IGDB.'
+}
+
 export const IgdbGameSuggestions = ({
+    isConfigured,
     onPick,
 }: {
+    isConfigured: boolean
     onPick: (game: IgdbGameSuggestion) => void
 }) => {
     const searchIgdbGames = useAction(api.games.searchIgdbGames)
@@ -26,6 +49,13 @@ export const IgdbGameSuggestions = ({
 
     useEffect(() => {
         const trimmedSearchText = searchText.trim()
+
+        if (!isConfigured) {
+            setResults([])
+            setError(null)
+            setIsLoading(false)
+            return
+        }
 
         if (trimmedSearchText.length < MIN_SEARCH_LENGTH) {
             setResults([])
@@ -47,11 +77,7 @@ export const IgdbGameSuggestions = ({
                 .catch((error) => {
                     if (!isCurrent) return
                     setResults([])
-                    setError(
-                        error instanceof Error
-                            ? error.message
-                            : 'Nie udało się pobrać sugestii z IGDB.',
-                    )
+                    setError(getIgdbSearchErrorMessage(error))
                 })
                 .finally(() => {
                     if (isCurrent) {
@@ -64,7 +90,7 @@ export const IgdbGameSuggestions = ({
             isCurrent = false
             window.clearTimeout(timeoutId)
         }
-    }, [searchIgdbGames, searchText])
+    }, [isConfigured, searchIgdbGames, searchText])
 
     const handlePick = (game: IgdbGameSuggestion) => {
         onPick(game)
@@ -82,13 +108,31 @@ export const IgdbGameSuggestions = ({
                     id="igdb-game-search"
                     value={searchText}
                     onChange={(event) => setSearchText(event.target.value)}
+                    disabled={!isConfigured}
                     className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
-                    placeholder="Szukaj po tytule"
+                    placeholder={
+                        isConfigured
+                            ? 'Szukaj po tytule'
+                            : 'Skonfiguruj IGDB w integracjach'
+                    }
                     autoCapitalize="off"
                     autoCorrect="off"
                     spellCheck={false}
                 />
             </div>
+
+            {!isConfigured ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-zinc-400">
+                    <span>Podpowiedzi wymagają zapisanej konfiguracji IGDB.</span>
+                    <button
+                        type="button"
+                        onClick={() => navigate('/admin/integrations')}
+                        className="font-medium text-teal-200 hover:text-teal-100"
+                    >
+                        Przejdź do integracji
+                    </button>
+                </div>
+            ) : null}
 
             {isLoading ? (
                 <p className="mt-3 text-sm text-zinc-400">Szukam w IGDB...</p>

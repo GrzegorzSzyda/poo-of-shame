@@ -78,7 +78,7 @@ export const AdminPage = ({ route }: { route: AdminRoute }) => {
                     />
                 ))}
             </nav>
-            {route === 'games' ? <GamesAdminPanel /> : null}
+            {route === 'games' ? <GamesAdminPanel igdb={panel?.igdb} /> : null}
             {route === 'users' ? <UserRolesPanel users={panel?.users} /> : null}
             {route === 'integrations' ? <IgdbSettingsForm igdb={panel?.igdb} /> : null}
         </section>

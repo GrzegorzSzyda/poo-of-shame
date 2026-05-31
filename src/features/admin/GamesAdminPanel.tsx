@@ -12,6 +12,10 @@ import {
     toGameMutationArgs,
 } from './releaseForm'
 
+type IgdbSettings = {
+    hasClientSecret: boolean
+} | null
+
 const getGameAdminErrorMessage = (error: unknown, fallback: string) => {
     const message = error instanceof Error ? error.message : ''
 
@@ -182,12 +186,12 @@ const GameRow = ({ game }: { game: Doc<'games'> }) => {
     )
 }
 
-export const GamesAdminPanel = () => {
+export const GamesAdminPanel = ({ igdb }: { igdb?: IgdbSettings }) => {
     const games = useQuery(api.games.listAdminGames, { limit: 50 })
 
     return (
         <div className="space-y-5">
-            <AddGameForm />
+            <AddGameForm isIgdbConfigured={Boolean(igdb?.hasClientSecret)} />
             <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
                 <div className="border-b border-zinc-800 px-4 py-3">
                     <h3 className="font-medium text-white">Katalog gier</h3>

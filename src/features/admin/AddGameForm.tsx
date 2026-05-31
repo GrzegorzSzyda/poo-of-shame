@@ -10,7 +10,7 @@ import {
     toGameMutationArgs,
 } from './releaseForm'
 
-export const AddGameForm = () => {
+export const AddGameForm = ({ isIgdbConfigured }: { isIgdbConfigured: boolean }) => {
     const createGame = useMutation(api.games.createGame)
     const uploadCoverFromUrl = useAction(api.games.uploadCoverFromUrl)
     const [values, setValues] = useState<GameFormValues>(createEmptyGameFormValues)
@@ -75,7 +75,10 @@ export const AddGameForm = () => {
                     </p>
                 </div>
 
-                <IgdbGameSuggestions onPick={handlePickIgdbGame} />
+                <IgdbGameSuggestions
+                    isConfigured={isIgdbConfigured}
+                    onPick={handlePickIgdbGame}
+                />
 
                 <GameFormFields
                     idPrefix="new-game"

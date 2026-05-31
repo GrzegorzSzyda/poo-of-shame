@@ -175,12 +175,20 @@ should use indexes that match the product views.
 
 ## Next Implementation Step
 
-Restore Convex into the new app in a minimal way:
+Current completed slice:
 
-1. Bring back only the Convex provider/config needed to connect.
-2. Bring back a minimal `games` backend based on the existing data.
-3. Build an admin "Add game" flow.
-4. Build a user "Add to library" flow from existing catalog games.
+1. Convex and Clerk are restored in the rewrite.
+2. Admin routes exist for games, users, and integrations.
+3. Admin can add games to the shared catalog.
+4. Admin can list, edit, and delete catalog games.
+5. Admin can manage roles and store IGDB credentials.
 
-Do not bring back the old layout, old dashboard, old cheats pages, or old large
-component tree.
+Next product slice:
+
+1. User can search the shared catalog.
+2. User can add a catalog game to their own `userGames` library/kupka.
+3. User cannot add the same game twice.
+4. The app shows a minimal library view proving that the new model works.
+
+Still do not bring back the old layout, old dashboard, old cheats pages, or old
+large component tree.

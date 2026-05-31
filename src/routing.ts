@@ -1,6 +1,9 @@
 export type AdminRoute = 'games' | 'users' | 'integrations'
 
-export type AppRoute = { section: 'home' } | { section: 'admin'; adminRoute: AdminRoute }
+export type AppRoute =
+    | { section: 'home' }
+    | { section: 'library' }
+    | { section: 'admin'; adminRoute: AdminRoute }
 
 export const getRoute = (): AppRoute => {
     const path = window.location.pathname
@@ -15,6 +18,10 @@ export const getRoute = (): AppRoute => {
 
     if (path === '/admin' || path === '/admin/games') {
         return { section: 'admin', adminRoute: 'games' }
+    }
+
+    if (path === '/library') {
+        return { section: 'library' }
     }
 
     return { section: 'home' }

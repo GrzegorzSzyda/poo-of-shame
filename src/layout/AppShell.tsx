@@ -39,6 +39,12 @@ export const AppShell = ({
 }) => {
     const adminStatus = useAdminStatus()
     const isAdminRoute = route.section === 'admin'
+    const title =
+        route.section === 'admin'
+            ? 'Admin'
+            : route.section === 'library'
+              ? 'Kupka'
+              : 'Rewrite'
 
     return (
         <main className="min-h-screen bg-zinc-950 px-6 py-8 text-zinc-100">
@@ -49,13 +55,16 @@ export const AppShell = ({
                             Poo of Shame
                         </p>
                         <h1 className="mt-2 text-3xl font-semibold text-white">
-                            {isAdminRoute ? 'Admin' : 'Rewrite'}
+                            {title}
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <nav className="flex items-center gap-1">
                             <NavLink active={route.section === 'home'} href="/">
                                 Start
+                            </NavLink>
+                            <NavLink active={route.section === 'library'} href="/library">
+                                Kupka
                             </NavLink>
                             {adminStatus?.canManage ? (
                                 <NavLink active={isAdminRoute} href="/admin/games">

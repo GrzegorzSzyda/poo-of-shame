@@ -5,6 +5,7 @@ import { useSyncCurrentUser } from './auth/useSyncCurrentUser'
 import { AppShell } from './layout/AppShell'
 import { AdminPage } from './pages/AdminPage'
 import { HomePage } from './pages/HomePage'
+import { LibraryPage } from './pages/LibraryPage'
 import { getRoute } from './routing'
 
 const SignedInApp = () => {
@@ -21,6 +22,8 @@ const SignedInApp = () => {
         <AppShell route={route}>
             {route.section === 'admin' ? (
                 <AdminPage route={route.adminRoute} />
+            ) : route.section === 'library' ? (
+                <LibraryPage />
             ) : (
                 <HomePage />
             )}

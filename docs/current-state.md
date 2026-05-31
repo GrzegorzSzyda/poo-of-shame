@@ -127,6 +127,7 @@ aktualny uzytkownik jest synchronizowany do Convexa.
 Aktualne glowne route'y:
 
 - `/` - strona startowa/diagnostyczna po zalogowaniu,
+- `/library` - podstawowa biblioteka/kupka uzytkownika,
 - `/admin/games` - zarzadzanie katalogiem gier,
 - `/admin/users` - zarzadzanie rolami,
 - `/admin/integrations` - konfiguracja integracji.
@@ -183,6 +184,28 @@ Pliki:
 
 Panel pozwala zapisac `igdbClientId` i `igdbClientSecret` w Convexie.
 
+### Biblioteka uzytkownika
+
+Pliki:
+
+- `src/pages/LibraryPage.tsx`
+- `convex/library.ts`
+
+Backend:
+
+- `searchCatalogForLibrary`
+- `listMyLibrary`
+- `addGameToLibrary`
+
+Zasady:
+
+- uzytkownik wyszukuje gry z katalogu po tytule,
+- dodanie tworzy rekord `userGames`,
+- duplikaty `userId + gameId` sa blokowane,
+- poczatkowy status jest wybierany w formularzu,
+- `interest` jest ustawiane suwakiem 0-100,
+- ten slice nie tworzy jeszcze `gameRuns` ani `gameAccess`.
+
 ## Lokalna Praca
 
 Standardowa weryfikacja:
@@ -208,11 +231,9 @@ PORT=3002 bun dev
 
 ## Najblizsze Sensowne Kroki
 
-1. Zrobic flow dodawania gier do biblioteki uzytkownika z katalogu.
-2. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
+1. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
    szybko przestanie wystarczac.
-3. Dodac podstawowy widok biblioteki uzytkownika.
-4. Dodac zarzadzanie statusami `userGames`.
-5. Dodac pierwszy flow tworzenia runu dla gry w bibliotece.
-6. Zaplanowac migracje `libraryEntries` do nowego modelu, ale dopiero gdy nowe
+2. Dodac zarzadzanie statusami `userGames`.
+3. Dodac pierwszy flow tworzenia runu dla gry w bibliotece.
+4. Zaplanowac migracje `libraryEntries` do nowego modelu, ale dopiero gdy nowe
    widoki beda gotowe.

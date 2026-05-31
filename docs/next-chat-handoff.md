@@ -21,14 +21,19 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 
 ## Stan Na Koniec Ostatniej Sesji
 
-Ostatni commit:
+Ostatnia zmiana w tej sesji:
 
 ```text
-b8fec6a Add admin game catalog management
+Add basic user library flow
 ```
 
 Zawiera:
 
+- podstawowy widok `/library`,
+- wyszukiwanie katalogu przy dodawaniu gry do kupki,
+- tworzenie rekordow `userGames`,
+- blokade duplikatow `userId + gameId`,
+- poczatkowy status i `interest`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -79,6 +84,8 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `src/features/admin/releaseForm.ts` - mapping formularza premiery.
 - `src/features/admin/UserRolesPanel.tsx` - role.
 - `src/features/admin/IgdbSettingsForm.tsx` - IGDB.
+- `src/pages/LibraryPage.tsx` - podstawowa kupka uzytkownika.
+- `convex/library.ts` - query/mutacje dla `userGames`.
 - `docs/current-state.md` - aktualna dokumentacja techniczna.
 - `docs/product-v1.md` - kierunek produktu.
 
@@ -107,19 +114,12 @@ PORT=3002 bun dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to dodawanie gry do biblioteki uzytkownika:
+Najlepszy kolejny krok to zarzadzanie statusem gry w kupce albo pierwszy
+kontrolowany flow runow:
 
-- wyszukiwanie katalogu gier,
-- wybor gry,
-- utworzenie `userGames`,
-- podstawowy status i `interest`,
-- zabezpieczenie przed duplikatem `userId + gameId`,
-- prosty widok "moja biblioteka" jako potwierdzenie, ze dane dzialaja.
+- edycja statusu i `interest` dla istniejacego `userGames`,
+- decyzja, kiedy zmiana statusu tworzy albo aktualizuje `gameRuns`,
+- podstawowe dodanie pierwszego runu dla gry w bibliotece.
 
-Przed implementacja warto doprecyzowac:
-
-- czy pierwszy widok biblioteki ma byc osobna trasa `/library`,
-- jakie statusy pokazac w formularzu V1,
-- czy dodanie do biblioteki ma od razu tworzyc pierwszy run,
-- czy `gameAccess` ma byc wymagane przy dodaniu gry, czy opcjonalne w kolejnym
-  kroku.
+Nie migrowac jeszcze `libraryEntries`, dopoki nowe widoki nie sa wygodne do
+codziennego uzywania.

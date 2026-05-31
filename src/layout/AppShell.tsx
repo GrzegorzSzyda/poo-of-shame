@@ -2,18 +2,7 @@ import { UserButton } from '@clerk/clerk-react'
 import { useQuery } from 'convex/react'
 import type { ReactNode } from 'react'
 import { api } from '../../convex/_generated/api'
-
-type Route = 'home' | 'admin'
-
-const getRoute = (): Route => {
-    if (window.location.pathname === '/admin') return 'admin'
-    return 'home'
-}
-
-const navigate = (href: string) => {
-    window.history.pushState({}, '', href)
-    window.dispatchEvent(new PopStateEvent('popstate'))
-}
+import { type AppRoute, navigate } from '../routing'
 
 const NavLink = ({
     active,
@@ -41,8 +30,15 @@ export const useAdminStatus = () => {
     return useQuery(api.admin.getAdminStatus, {})
 }
 
-export const AppShell = ({ route, children }: { route: Route; children: ReactNode }) => {
+export const AppShell = ({
+    route,
+    children,
+}: {
+    route: AppRoute
+    children: ReactNode
+}) => {
     const adminStatus = useAdminStatus()
+    const isAdminRoute = route.section === 'admin'
 
     return (
         <main className="min-h-screen bg-zinc-950 px-6 py-8 text-zinc-100">
@@ -53,16 +49,16 @@ export const AppShell = ({ route, children }: { route: Route; children: ReactNod
                             Poo of Shame
                         </p>
                         <h1 className="mt-2 text-3xl font-semibold text-white">
-                            {route === 'admin' ? 'Ustawienia admina' : 'Rewrite'}
+                            {isAdminRoute ? 'Admin' : 'Rewrite'}
                         </h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <nav className="flex items-center gap-1">
-                            <NavLink active={route === 'home'} href="/">
+                            <NavLink active={route.section === 'home'} href="/">
                                 Start
                             </NavLink>
                             {adminStatus?.canManage ? (
-                                <NavLink active={route === 'admin'} href="/admin">
+                                <NavLink active={isAdminRoute} href="/admin/games">
                                     Admin
                                 </NavLink>
                             ) : null}
@@ -75,5 +71,3 @@ export const AppShell = ({ route, children }: { route: Route; children: ReactNod
         </main>
     )
 }
-
-export const getInitialRoute = getRoute

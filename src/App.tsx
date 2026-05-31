@@ -2,23 +2,28 @@ import { SignedIn, SignedOut } from '@clerk/clerk-react'
 import { useEffect, useState } from 'react'
 import { SignedOutView } from './auth/SignedOutView'
 import { useSyncCurrentUser } from './auth/useSyncCurrentUser'
-import { AppShell, getInitialRoute } from './layout/AppShell'
+import { AppShell } from './layout/AppShell'
 import { AdminPage } from './pages/AdminPage'
 import { HomePage } from './pages/HomePage'
+import { getRoute } from './routing'
 
 const SignedInApp = () => {
-    const [route, setRoute] = useState(getInitialRoute)
+    const [route, setRoute] = useState(getRoute)
     useSyncCurrentUser()
 
     useEffect(() => {
-        const handlePopState = () => setRoute(getInitialRoute())
+        const handlePopState = () => setRoute(getRoute())
         window.addEventListener('popstate', handlePopState)
         return () => window.removeEventListener('popstate', handlePopState)
     }, [])
 
     return (
         <AppShell route={route}>
-            {route === 'admin' ? <AdminPage /> : <HomePage />}
+            {route.section === 'admin' ? (
+                <AdminPage route={route.adminRoute} />
+            ) : (
+                <HomePage />
+            )}
         </AppShell>
     )
 }

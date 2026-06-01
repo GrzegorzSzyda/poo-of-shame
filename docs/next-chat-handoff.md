@@ -102,22 +102,28 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 Po zmianach:
 
 ```bash
-bunx convex codegen
-bunx convex dev --once
-bun run lint
-bun run build
+bun run check
 ```
 
 Dev server:
 
 ```bash
-bun dev
+bun run dev
+```
+
+Pomocnicze komendy dev:
+
+```bash
+bun run dev:web
+bun run convex:dev
+bun run dev:setup
+bun run convex:once
 ```
 
 Jesli port `3001` jest zajety:
 
 ```bash
-PORT=3002 bun dev
+PORT=3002 bun run dev
 ```
 
 ## Najbardziej Naturalny Nastepny Task

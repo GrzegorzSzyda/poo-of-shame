@@ -44,22 +44,32 @@ CLERK_JWT_ISSUER_DOMAIN=https://your-clerk-instance.clerk.accounts.dev
 GAMES_ADMIN_TOKEN_IDENTIFIERS=...
 ```
 
-Po zmianach w `convex/auth.config.ts` albo funkcjach Convexa:
+Codzienny lokalny start:
 
 ```bash
-bunx convex dev --once
+bun run dev
 ```
 
-Lokalny serwer:
+Ta komenda odpala watcher Convexa i lokalny serwer web. Druga codzienna komenda,
+przed commitem:
 
 ```bash
-bun dev
+bun run check
+```
+
+Klocki pod spodem, gdy trzeba odpalic cos osobno:
+
+```bash
+bun run dev:web        # sam lokalny serwer web
+bun run convex:dev     # ciagly proces Convexa
+bun run dev:setup      # codegen + jednorazowy sync Convexa
+bun run convex:once
 ```
 
 Jesli port `3001` jest zajety:
 
 ```bash
-PORT=3002 bun dev
+PORT=3002 bun run dev
 ```
 
 Build produkcyjny:
@@ -71,8 +81,5 @@ bun run build
 ## Weryfikacja Przed Commitem
 
 ```bash
-bunx convex codegen
-bunx convex dev --once
-bun run lint
-bun run build
+bun run check
 ```

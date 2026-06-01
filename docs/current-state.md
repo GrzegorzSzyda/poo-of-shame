@@ -224,22 +224,28 @@ Zasady:
 Standardowa weryfikacja:
 
 ```bash
-bunx convex codegen
-bunx convex dev --once
-bun run lint
-bun run build
+bun run check
 ```
 
 Serwer dev:
 
 ```bash
-bun dev
+bun run dev
+```
+
+Pomocnicze komendy dev:
+
+```bash
+bun run dev:web
+bun run convex:dev
+bun run dev:setup
+bun run convex:once
 ```
 
 Jesli `3001` jest zajety:
 
 ```bash
-PORT=3002 bun dev
+PORT=3002 bun run dev
 ```
 
 ## Najblizsze Sensowne Kroki

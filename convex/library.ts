@@ -53,6 +53,11 @@ const libraryAllRunFilterValidator = v.union(
     v.literal('with_run'),
     v.literal('without_run'),
 )
+const backlogStatusFilterValidator = v.union(
+    v.literal('all'),
+    v.literal('wanted'),
+    v.literal('owned'),
+)
 
 type UserGameStatus =
     | 'wanted'
@@ -311,6 +316,25 @@ const matchesLibraryAllFilters = (
     return true
 }
 
+const sortBacklogUserGames = (left: Doc<'userGames'>, right: Doc<'userGames'>) => {
+    if (right.interest !== left.interest) {
+        return right.interest - left.interest
+    }
+
+    return right.updatedAt - left.updatedAt
+}
+
+const sortBacklogLibraryItems = (
+    left: ReturnType<typeof toLibraryGame>,
+    right: ReturnType<typeof toLibraryGame>,
+) => {
+    if (right.interest !== left.interest) {
+        return right.interest - left.interest
+    }
+
+    return right.updatedAt - left.updatedAt
+}
+
 const findLatestRunForUserGame = async (
     ctx: MutationCtx,
     userId: string,
@@ -558,6 +582,96 @@ export const listMyLibraryAll = query({
             page,
             pageSize,
             hasMore: offset + pageSize < matchedCount,
+        }
+    },
+})
+
+export const listMyBacklog = query({
+    args: {
+        searchText: v.optional(v.string()),
+        statusFilter: backlogStatusFilterValidator,
+        page: v.number(),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const pageSize = Math.min(Math.max(Math.floor(args.pageSize ?? 25), 1), 50)
+        const page = Math.max(Math.floor(args.page), 1)
+        const offset = (page - 1) * pageSize
+        const searchText = normalizeGameTitle(args.searchText ?? '')
+        const statuses: Array<'wanted' | 'owned'> =
+            args.statusFilter === 'all' ? ['wanted', 'owned'] : [args.statusFilter]
+
+        if (searchText.length >= 2) {
+            const games = await ctx.db
+                .query('games')
+                .withIndex('by_titleNormalized', (q) =>
+                    q
+                        .gte('titleNormalized', searchText)
+                        .lt('titleNormalized', getPrefixEnd(searchText)),
+                )
+                .take(200)
+
+            const joinedEntries = await Promise.all(
+                games.map(async (game) => {
+                    const userGame = await ctx.db
+                        .query('userGames')
+                        .withIndex('by_user_game', (q) =>
+                            q.eq('userId', identity.subject).eq('gameId', game._id),
+                        )
+                        .unique()
+
+                    if (
+                        !userGame ||
+                        !statuses.includes(userGame.status as 'wanted' | 'owned')
+                    ) {
+                        return null
+                    }
+
+                    return toLibraryGame(userGame, game)
+                }),
+            )
+
+            const items = joinedEntries
+                .filter((entry) => entry !== null)
+                .sort(sortBacklogLibraryItems)
+
+            return {
+                items: items.slice(offset, offset + pageSize),
+                total: items.length,
+                page,
+                pageSize,
+                hasMore: offset + pageSize < items.length,
+            }
+        }
+
+        const collected = await Promise.all(
+            statuses.map((status) =>
+                ctx.db
+                    .query('userGames')
+                    .withIndex('by_user_status', (q) =>
+                        q.eq('userId', identity.subject).eq('status', status),
+                    )
+                    .collect(),
+            ),
+        )
+
+        const items = collected.flat().sort(sortBacklogUserGames)
+
+        const pageEntries = items.slice(offset, offset + pageSize)
+        const joinedEntries = await Promise.all(
+            pageEntries.map(async (userGame) => {
+                const game = await ctx.db.get(userGame.gameId)
+                return toLibraryGame(userGame, game)
+            }),
+        )
+
+        return {
+            items: joinedEntries,
+            total: items.length,
+            page,
+            pageSize,
+            hasMore: offset + pageSize < items.length,
         }
     },
 })

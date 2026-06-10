@@ -27,6 +27,7 @@ type RunDatePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unkno
 type LibraryView = 'all' | 'backlog' | 'active' | 'history' | 'releases'
 type LibraryRunFilter = 'all' | 'with_run' | 'without_run'
 type LibraryStatusFilter = 'all' | UserGameStatus
+type BacklogStatusFilter = 'all' | 'wanted' | 'owned'
 
 type CatalogSearchGame = {
     _id: Id<'games'>
@@ -112,6 +113,14 @@ type LibraryAllResult = {
     hasMore: boolean
 }
 
+type BacklogResult = {
+    items: LibraryEntry[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -124,7 +133,7 @@ const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
 const libraryViewTabs: Array<{ value: LibraryView; label: string; disabled?: boolean }> =
     [
         { value: 'all', label: 'Wszystkie' },
-        { value: 'backlog', label: 'Kupka', disabled: true },
+        { value: 'backlog', label: 'Kupka' },
         { value: 'active', label: 'Gram teraz', disabled: true },
         { value: 'history', label: 'Historia', disabled: true },
         { value: 'releases', label: 'Premiery', disabled: true },
@@ -139,6 +148,12 @@ const libraryRunFilterOptions: Array<{ value: LibraryRunFilter; label: string }>
     { value: 'all', label: 'Runy: wszystkie' },
     { value: 'with_run', label: 'Tylko z runem' },
     { value: 'without_run', label: 'Tylko bez runu' },
+]
+
+const backlogStatusOptions: Array<{ value: BacklogStatusFilter; label: string }> = [
+    { value: 'all', label: 'Wanted + owned' },
+    { value: 'wanted', label: 'Tylko wanted' },
+    { value: 'owned', label: 'Tylko owned' },
 ]
 
 const statusLabels = Object.fromEntries(
@@ -476,6 +491,129 @@ const LibraryAllPanel = () => {
             ) : (
                 <div className="px-4 py-5 text-sm text-zinc-400">
                     Brak wpisów dla wybranych filtrów.
+                </div>
+            )}
+        </section>
+    )
+}
+
+const BacklogPanel = () => {
+    const [searchText, setSearchText] = useState('')
+    const [statusFilter, setStatusFilter] = useState<BacklogStatusFilter>('all')
+    const [page, setPage] = useState(1)
+    const trimmedSearchText = searchText.trim()
+    const searchFilter = trimmedSearchText.length >= 2 ? trimmedSearchText : ''
+    const library = useQuery(api.library.listMyBacklog, {
+        searchText: searchFilter,
+        statusFilter,
+        page,
+        pageSize: 25,
+    }) as BacklogResult | undefined
+
+    return (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+            <div className="border-b border-zinc-800 px-4 py-3">
+                <h2 className="font-medium text-white">Widok: Kupka</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                    Backlog bez aktywnie granych i zakończonych gier.
+                </p>
+            </div>
+
+            <div className="border-b border-zinc-800 px-4 py-4">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_15rem]">
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-backlog-search"
+                            className="text-sm text-zinc-300"
+                        >
+                            Tytuł
+                        </label>
+                        <input
+                            id="library-backlog-search"
+                            value={searchText}
+                            onChange={(event) => {
+                                setSearchText(event.target.value)
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            placeholder="Minimum 2 znaki"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-backlog-status"
+                            className="text-sm text-zinc-300"
+                        >
+                            Status kupki
+                        </label>
+                        <select
+                            id="library-backlog-status"
+                            value={statusFilter}
+                            onChange={(event) => {
+                                setStatusFilter(event.target.value as BacklogStatusFilter)
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {backlogStatusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {trimmedSearchText.length === 1 ? (
+                    <p className="mt-3 text-xs text-zinc-500">
+                        Wyszukiwanie po tytule startuje od 2 znaków.
+                    </p>
+                ) : null}
+            </div>
+
+            {library === undefined ? (
+                <div className="px-4 py-5 text-sm text-zinc-400">Ładowanie widoku...</div>
+            ) : library.items.length > 0 ? (
+                <>
+                    <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+                        Wyniki: {library.total}
+                        <span className="ml-3">
+                            Sortowanie: zainteresowanie malejąco, potem ostatnia zmiana.
+                        </span>
+                    </div>
+
+                    <ul className="divide-y divide-zinc-800">
+                        {library.items.map((entry) => (
+                            <LibraryEntryRow key={entry._id} entry={entry} />
+                        ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={library.page <= 1}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Poprzednia
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => current + 1)}
+                            disabled={!library.hasMore}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Następna
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className="px-4 py-5 text-sm text-zinc-400">
+                    Brak gier w kupce dla wybranych filtrów.
                 </div>
             )}
         </section>
@@ -1715,6 +1853,7 @@ export const LibraryPage = () => {
             <LibraryViewTabs activeView={activeView} onChange={setActiveView} />
 
             {activeView === 'all' ? <LibraryAllPanel /> : null}
+            {activeView === 'backlog' ? <BacklogPanel /> : null}
         </div>
     )
 }

@@ -260,8 +260,11 @@ Zasady:
 - `/library` ma juz shell zakladek pod docelowe widoki po migracji,
 - aktywny jest widok `Wszystkie` z backendowym filtrowaniem po tytule, statusie
   i obecnosci runu oraz z prosta paginacja stron,
-- kolejne widoki (`Kupka`, `Gram Teraz`, `Historia`, `Premiery`) nadal czekaja
-  na implementacje.
+- aktywny jest tez widok `Kupka` na osobnym query, tylko dla statusow `wanted`
+  i `owned`, z filtrowaniem po tytule i statusie oraz sortowaniem
+  `interest desc`, potem `updatedAt desc`,
+- kolejne widoki (`Gram Teraz`, `Historia`, `Premiery`) nadal czekaja na
+  implementacje.
 
 ## Lokalna Praca
 

@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Start library views shell with All tab
+Add backlog tab and dedicated query
 ```
 
 Zawiera:
@@ -67,7 +67,12 @@ Zawiera:
 - aktywny widok `Wszystkie`,
 - backendowe query `listMyLibraryAll`,
 - filtrowanie `Wszystkie` po tytule, statusie i obecnosci runu,
-- prosta paginacja stron dla `Wszystkie`.
+- prosta paginacja stron dla `Wszystkie`,
+- aktywny widok `Kupka`,
+- backendowe query `listMyBacklog`,
+- `Kupka` pokazuje tylko `wanted` i `owned`,
+- `Kupka` ma filtrowanie po tytule i statusie oraz sortowanie
+  `interest desc`, potem `updatedAt desc`.
 
 Push wykonany na `origin/rewrite`.
 
@@ -157,7 +162,6 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
 Priorytet implementacji:
 
-- `Kupka` bez statusu `playing`,
 - `Gram Teraz` oparty o `gameRuns.status = playing`,
 - `Historia` z wyborem roku,
 - `Premiery`: moje premiery i premiery z katalogu.

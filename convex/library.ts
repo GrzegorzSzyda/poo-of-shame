@@ -39,6 +39,20 @@ const runDatePrecisionValidator = v.union(
     v.literal('unknown'),
 )
 const runSuggestionModeValidator = v.union(v.literal('latest'), v.literal('new'))
+const libraryAllStatusFilterValidator = v.union(
+    v.literal('all'),
+    v.literal('wanted'),
+    v.literal('owned'),
+    v.literal('playing'),
+    v.literal('completed'),
+    v.literal('mastered'),
+    v.literal('dropped'),
+)
+const libraryAllRunFilterValidator = v.union(
+    v.literal('all'),
+    v.literal('with_run'),
+    v.literal('without_run'),
+)
 
 type UserGameStatus =
     | 'wanted'
@@ -275,6 +289,28 @@ const toRunListItem = (run: Doc<'gameRuns'>) => ({
     updatedAt: run.updatedAt,
 })
 
+const matchesLibraryAllFilters = (
+    userGame: Doc<'userGames'>,
+    filters: {
+        statusFilter: 'all' | UserGameStatus
+        runFilter: 'all' | 'with_run' | 'without_run'
+    },
+) => {
+    if (filters.statusFilter !== 'all' && userGame.status !== filters.statusFilter) {
+        return false
+    }
+
+    if (filters.runFilter === 'with_run' && !userGame.lastRunId) {
+        return false
+    }
+
+    if (filters.runFilter === 'without_run' && userGame.lastRunId) {
+        return false
+    }
+
+    return true
+}
+
 const findLatestRunForUserGame = async (
     ctx: MutationCtx,
     userId: string,
@@ -429,6 +465,100 @@ export const listMyLibrary = query({
                 return toLibraryGame(userGame, game)
             }),
         )
+    },
+})
+
+export const listMyLibraryAll = query({
+    args: {
+        searchText: v.optional(v.string()),
+        statusFilter: libraryAllStatusFilterValidator,
+        runFilter: libraryAllRunFilterValidator,
+        page: v.number(),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const pageSize = Math.min(Math.max(Math.floor(args.pageSize ?? 25), 1), 50)
+        const page = Math.max(Math.floor(args.page), 1)
+        const offset = (page - 1) * pageSize
+        const filters = {
+            statusFilter: args.statusFilter,
+            runFilter: args.runFilter,
+        }
+        const searchText = normalizeGameTitle(args.searchText ?? '')
+
+        if (searchText.length >= 2) {
+            const games = await ctx.db
+                .query('games')
+                .withIndex('by_titleNormalized', (q) =>
+                    q
+                        .gte('titleNormalized', searchText)
+                        .lt('titleNormalized', getPrefixEnd(searchText)),
+                )
+                .take(200)
+
+            const joinedEntries = await Promise.all(
+                games.map(async (game) => {
+                    const userGame = await ctx.db
+                        .query('userGames')
+                        .withIndex('by_user_game', (q) =>
+                            q.eq('userId', identity.subject).eq('gameId', game._id),
+                        )
+                        .unique()
+
+                    if (!userGame || !matchesLibraryAllFilters(userGame, filters)) {
+                        return null
+                    }
+
+                    return toLibraryGame(userGame, game)
+                }),
+            )
+
+            const items = joinedEntries
+                .filter((entry) => entry !== null)
+                .sort((left, right) => right.updatedAt - left.updatedAt)
+
+            return {
+                items: items.slice(offset, offset + pageSize),
+                total: items.length,
+                page,
+                pageSize,
+                hasMore: offset + pageSize < items.length,
+            }
+        }
+
+        const pageEntries: Array<Doc<'userGames'>> = []
+        let matchedCount = 0
+
+        for await (const userGame of ctx.db
+            .query('userGames')
+            .withIndex('by_user_updatedAt', (q) => q.eq('userId', identity.subject))
+            .order('desc')) {
+            if (!matchesLibraryAllFilters(userGame, filters)) {
+                continue
+            }
+
+            if (matchedCount >= offset && pageEntries.length < pageSize) {
+                pageEntries.push(userGame)
+            }
+
+            matchedCount += 1
+        }
+
+        const items = await Promise.all(
+            pageEntries.map(async (userGame) => {
+                const game = await ctx.db.get(userGame.gameId)
+                return toLibraryGame(userGame, game)
+            }),
+        )
+
+        return {
+            items,
+            total: matchedCount,
+            page,
+            pageSize,
+            hasMore: offset + pageSize < matchedCount,
+        }
     },
 })
 

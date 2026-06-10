@@ -219,6 +219,7 @@ Backend:
 
 - `searchCatalogForLibrary`
 - `listMyLibrary`
+- `listMyLibraryAll`
 - `addGameToLibrary`
 - `updateLibraryGame`
 - `removeGameFromLibrary`
@@ -255,7 +256,12 @@ Zasady:
 - sugestia pozwala jawnie oznaczyc ostatni run odpowiednim statusem albo
   utworzyc nowy run z tym statusem,
 - reczne dodawanie w tym slice nie tworzy jeszcze `gameAccess`, ale migracja
-  legacy potrafi utworzyc `gameAccess` na podstawie starych platform.
+  legacy potrafi utworzyc `gameAccess` na podstawie starych platform,
+- `/library` ma juz shell zakladek pod docelowe widoki po migracji,
+- aktywny jest widok `Wszystkie` z backendowym filtrowaniem po tytule, statusie
+  i obecnosci runu oraz z prosta paginacja stron,
+- kolejne widoki (`Kupka`, `Gram Teraz`, `Historia`, `Premiery`) nadal czekaja
+  na implementacje.
 
 ## Lokalna Praca
 

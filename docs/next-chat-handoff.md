@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Start soft status-to-run flow
+Start library views shell with All tab
 ```
 
 Zawiera:
@@ -62,11 +62,16 @@ Zawiera:
 - edycje gry inline,
 - usuwanie gry z backendowa blokada, jesli gra jest juz uzywana,
 - wspolny formularz gry,
-- indeks `userGames.by_game`.
+- indeks `userGames.by_game`,
+- zakladki widokow na `/library`,
+- aktywny widok `Wszystkie`,
+- backendowe query `listMyLibraryAll`,
+- filtrowanie `Wszystkie` po tytule, statusie i obecnosci runu,
+- prosta paginacja stron dla `Wszystkie`.
 
 Push wykonany na `origin/rewrite`.
 
-Issue #8 dostalo komentarz z zakresem wykonanej pracy.
+Push po tej sesji trzeba wykonac na `origin/rewrite`.
 
 ## Wazne Decyzje Produktowe
 
@@ -108,8 +113,8 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `src/features/admin/UserRolesPanel.tsx` - role.
 - `src/features/admin/IgdbSettingsForm.tsx` - IGDB.
 - `src/features/admin/LibraryMigrationPanel.tsx` - migracja legacy biblioteki.
-- `src/pages/LibraryPage.tsx` - podstawowa kupka uzytkownika.
-- `convex/library.ts` - query/mutacje dla `userGames`.
+- `src/pages/LibraryPage.tsx` - shell widokow biblioteki i aktywny widok `Wszystkie`.
+- `convex/library.ts` - query/mutacje dla `userGames`, w tym `listMyLibraryAll`.
 - `convex/migrations.ts` - admin-only migracja `libraryEntries`.
 - `docs/current-state.md` - aktualna dokumentacja techniczna.
 - `docs/product-v1.md` - kierunek produktu.
@@ -152,7 +157,6 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
 Priorytet implementacji:
 
-- `Wszystkie` z filtrowaniem i limitem/stronicowaniem,
 - `Kupka` bez statusu `playing`,
 - `Gram Teraz` oparty o `gameRuns.status = playing`,
 - `Historia` z wyborem roku,

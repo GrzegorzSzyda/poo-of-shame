@@ -24,6 +24,9 @@ type GameRunType =
     | 'other'
 
 type RunDatePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
+type LibraryView = 'all' | 'backlog' | 'active' | 'history' | 'releases'
+type LibraryRunFilter = 'all' | 'with_run' | 'without_run'
+type LibraryStatusFilter = 'all' | UserGameStatus
 
 type CatalogSearchGame = {
     _id: Id<'games'>
@@ -101,6 +104,14 @@ type LibraryEntry = {
     } | null
 }
 
+type LibraryAllResult = {
+    items: LibraryEntry[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -108,6 +119,26 @@ const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'completed', label: 'Ukończona' },
     { value: 'mastered', label: 'Wymaksowana' },
     { value: 'dropped', label: 'Porzucona' },
+]
+
+const libraryViewTabs: Array<{ value: LibraryView; label: string; disabled?: boolean }> =
+    [
+        { value: 'all', label: 'Wszystkie' },
+        { value: 'backlog', label: 'Kupka', disabled: true },
+        { value: 'active', label: 'Gram teraz', disabled: true },
+        { value: 'history', label: 'Historia', disabled: true },
+        { value: 'releases', label: 'Premiery', disabled: true },
+    ]
+
+const libraryAllStatusOptions: Array<{ value: LibraryStatusFilter; label: string }> = [
+    { value: 'all', label: 'Wszystkie statusy' },
+    ...statusOptions.map((option) => ({ value: option.value, label: option.label })),
+]
+
+const libraryRunFilterOptions: Array<{ value: LibraryRunFilter; label: string }> = [
+    { value: 'all', label: 'Runy: wszystkie' },
+    { value: 'with_run', label: 'Tylko z runem' },
+    { value: 'without_run', label: 'Tylko bez runu' },
 ]
 
 const statusLabels = Object.fromEntries(
@@ -261,6 +292,195 @@ const Cover = ({ game }: { game: { title: string; coverImageUrl?: string } }) =>
             brak
         </div>
     )
+
+const LibraryViewTabs = ({
+    activeView,
+    onChange,
+}: {
+    activeView: LibraryView
+    onChange: (view: LibraryView) => void
+}) => (
+    <section className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-2">
+        <div className="flex flex-wrap gap-2">
+            {libraryViewTabs.map((tab) => {
+                const isActive = tab.value === activeView
+                return (
+                    <button
+                        key={tab.value}
+                        type="button"
+                        disabled={tab.disabled}
+                        onClick={() => onChange(tab.value)}
+                        className={`inline-flex h-10 items-center justify-center rounded-md px-3 text-sm transition ${
+                            isActive
+                                ? 'bg-teal-300 font-semibold text-zinc-950'
+                                : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700'
+                        } ${
+                            tab.disabled
+                                ? 'cursor-not-allowed opacity-45 hover:bg-zinc-800'
+                                : ''
+                        }`}
+                    >
+                        {tab.label}
+                    </button>
+                )
+            })}
+        </div>
+    </section>
+)
+
+const LibraryAllPanel = () => {
+    const [searchText, setSearchText] = useState('')
+    const [statusFilter, setStatusFilter] = useState<LibraryStatusFilter>('all')
+    const [runFilter, setRunFilter] = useState<LibraryRunFilter>('all')
+    const [page, setPage] = useState(1)
+    const trimmedSearchText = searchText.trim()
+    const searchFilter = trimmedSearchText.length >= 2 ? trimmedSearchText : ''
+    const library = useQuery(api.library.listMyLibraryAll, {
+        searchText: searchFilter,
+        statusFilter,
+        runFilter,
+        page,
+        pageSize: 25,
+    }) as LibraryAllResult | undefined
+
+    const handleSearchChange = (value: string) => {
+        setSearchText(value)
+        setPage(1)
+    }
+
+    return (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+            <div className="border-b border-zinc-800 px-4 py-3">
+                <h2 className="font-medium text-white">Widok: Wszystkie</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                    Kontrolny widok wszystkich wpisów po migracji nowej biblioteki.
+                </p>
+            </div>
+
+            <div className="border-b border-zinc-800 px-4 py-4">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_15rem_15rem]">
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-all-search"
+                            className="text-sm text-zinc-300"
+                        >
+                            Tytuł
+                        </label>
+                        <input
+                            id="library-all-search"
+                            value={searchText}
+                            onChange={(event) => handleSearchChange(event.target.value)}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            placeholder="Minimum 2 znaki"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-all-status"
+                            className="text-sm text-zinc-300"
+                        >
+                            Status gry
+                        </label>
+                        <select
+                            id="library-all-status"
+                            value={statusFilter}
+                            onChange={(event) => {
+                                setStatusFilter(event.target.value as LibraryStatusFilter)
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {libraryAllStatusOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-all-run-filter"
+                            className="text-sm text-zinc-300"
+                        >
+                            Runy
+                        </label>
+                        <select
+                            id="library-all-run-filter"
+                            value={runFilter}
+                            onChange={(event) => {
+                                setRunFilter(event.target.value as LibraryRunFilter)
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {libraryRunFilterOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {trimmedSearchText.length === 1 ? (
+                    <p className="mt-3 text-xs text-zinc-500">
+                        Wyszukiwanie po tytule startuje od 2 znaków.
+                    </p>
+                ) : null}
+            </div>
+
+            {library === undefined ? (
+                <div className="px-4 py-5 text-sm text-zinc-400">Ładowanie widoku...</div>
+            ) : library.items.length > 0 ? (
+                <>
+                    <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+                        Wyniki: {library.total}
+                        <span className="ml-3">
+                            Strona {library.page}
+                            {library.total > 0
+                                ? ` / ${Math.max(1, Math.ceil(library.total / library.pageSize))}`
+                                : ''}
+                        </span>
+                    </div>
+
+                    <ul className="divide-y divide-zinc-800">
+                        {library.items.map((entry) => (
+                            <LibraryEntryRow key={entry._id} entry={entry} />
+                        ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={library.page <= 1}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Poprzednia
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => current + 1)}
+                            disabled={!library.hasMore}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Następna
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className="px-4 py-5 text-sm text-zinc-400">
+                    Brak wpisów dla wybranych filtrów.
+                </div>
+            )}
+        </section>
+    )
+}
 
 const createEmptyRunDateFormValue = (): RunDateFormValue => ({
     precision: 'unknown',
@@ -1487,36 +1707,14 @@ const AddToLibraryPanel = () => {
 }
 
 export const LibraryPage = () => {
-    const library = useQuery(api.library.listMyLibrary, { limit: 50 })
+    const [activeView, setActiveView] = useState<LibraryView>('all')
 
     return (
         <div className="mt-8 space-y-5">
             <AddToLibraryPanel />
+            <LibraryViewTabs activeView={activeView} onChange={setActiveView} />
 
-            <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
-                <div className="border-b border-zinc-800 px-4 py-3">
-                    <h2 className="font-medium text-white">Moja kupka</h2>
-                    <p className="mt-1 text-sm text-zinc-400">
-                        Ostatnie 50 gier dodanych do nowego modelu biblioteki.
-                    </p>
-                </div>
-
-                {library === undefined ? (
-                    <div className="px-4 py-5 text-sm text-zinc-400">
-                        Ładowanie biblioteki...
-                    </div>
-                ) : library.length > 0 ? (
-                    <ul className="divide-y divide-zinc-800">
-                        {library.map((entry) => (
-                            <LibraryEntryRow key={entry._id} entry={entry} />
-                        ))}
-                    </ul>
-                ) : (
-                    <div className="px-4 py-5 text-sm text-zinc-400">
-                        Nie masz jeszcze gier w kupce.
-                    </div>
-                )}
-            </section>
+            {activeView === 'all' ? <LibraryAllPanel /> : null}
         </div>
     )
 }

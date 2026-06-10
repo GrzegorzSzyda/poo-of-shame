@@ -173,6 +173,33 @@ type HistoryResult = {
     }
 }
 
+type ReleaseSource = 'mine' | 'catalog'
+type ReleaseYearFilter = 'all' | 'unknown' | number
+
+type ReleaseListItem = {
+    gameId: Id<'games'>
+    title: string
+    releaseDate?: string
+    releaseYear?: number
+    releaseQuarter?: number
+    releaseYearMonth?: string
+    releaseText?: string
+    coverImageUrl?: string
+    userGameId?: Id<'userGames'>
+    userGameStatus?: UserGameStatus
+    interest?: number
+    updatedAt?: number
+}
+
+type ReleaseCalendarResult = {
+    items: ReleaseListItem[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+    availableYears: number[]
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -188,8 +215,13 @@ const libraryViewTabs: Array<{ value: LibraryView; label: string; disabled?: boo
         { value: 'backlog', label: 'Kupka' },
         { value: 'active', label: 'Gram teraz' },
         { value: 'history', label: 'Historia' },
-        { value: 'releases', label: 'Premiery', disabled: true },
+        { value: 'releases', label: 'Premiery' },
     ]
+
+const releaseSourceOptions: Array<{ value: ReleaseSource; label: string }> = [
+    { value: 'mine', label: 'Moje premiery' },
+    { value: 'catalog', label: 'Katalog' },
+]
 
 const libraryAllStatusOptions: Array<{ value: LibraryStatusFilter; label: string }> = [
     { value: 'all', label: 'Wszystkie statusy' },
@@ -951,6 +983,222 @@ const HistoryPanel = () => {
                         runs={history.sections.withoutConcreteYear}
                         emptyLabel="Brak runów bez konkretnego roku."
                     />
+                </div>
+            )}
+        </section>
+    )
+}
+
+const ReleaseCalendarPanel = () => {
+    const [source, setSource] = useState<ReleaseSource>('mine')
+    const [searchText, setSearchText] = useState('')
+    const [yearFilter, setYearFilter] = useState<ReleaseYearFilter>('all')
+    const [page, setPage] = useState(1)
+    const trimmedSearchText = searchText.trim()
+    const searchFilter = trimmedSearchText.length >= 2 ? trimmedSearchText : ''
+    const releases = useQuery(
+        source === 'mine'
+            ? api.library.listMyReleaseCalendar
+            : api.library.listCatalogReleaseCalendar,
+        {
+            searchText: searchFilter,
+            yearFilter,
+            page,
+            pageSize: 25,
+        },
+    ) as ReleaseCalendarResult | undefined
+
+    const yearOptions: Array<ReleaseYearFilter> = [
+        'all',
+        ...(releases?.availableYears ?? []),
+        'unknown',
+    ]
+
+    return (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+            <div className="border-b border-zinc-800 px-4 py-3">
+                <h2 className="font-medium text-white">Widok: Premiery</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                    Przegląd premier z twojej biblioteki albo z całego katalogu.
+                </p>
+            </div>
+
+            <div className="border-b border-zinc-800 px-4 py-4">
+                <div className="grid gap-3 md:grid-cols-[14rem_minmax(0,1fr)_12rem]">
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-release-source"
+                            className="text-sm text-zinc-300"
+                        >
+                            Źródło
+                        </label>
+                        <select
+                            id="library-release-source"
+                            value={source}
+                            onChange={(event) => {
+                                setSource(event.target.value as ReleaseSource)
+                                setPage(1)
+                                setYearFilter('all')
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {releaseSourceOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-release-search"
+                            className="text-sm text-zinc-300"
+                        >
+                            Tytuł
+                        </label>
+                        <input
+                            id="library-release-search"
+                            value={searchText}
+                            onChange={(event) => {
+                                setSearchText(event.target.value)
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            placeholder="Minimum 2 znaki"
+                            autoCapitalize="off"
+                            autoCorrect="off"
+                            spellCheck={false}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="library-release-year"
+                            className="text-sm text-zinc-300"
+                        >
+                            Rok premiery
+                        </label>
+                        <select
+                            id="library-release-year"
+                            value={String(yearFilter)}
+                            onChange={(event) => {
+                                const value = event.target.value
+                                setYearFilter(
+                                    value === 'all' || value === 'unknown'
+                                        ? value
+                                        : Number(value),
+                                )
+                                setPage(1)
+                            }}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {yearOptions.map((option) => (
+                                <option key={String(option)} value={String(option)}>
+                                    {option === 'all'
+                                        ? 'Wszystkie'
+                                        : option === 'unknown'
+                                          ? 'Brak roku'
+                                          : option}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {trimmedSearchText.length === 1 ? (
+                    <p className="mt-3 text-xs text-zinc-500">
+                        Wyszukiwanie po tytule startuje od 2 znaków.
+                    </p>
+                ) : null}
+            </div>
+
+            {releases === undefined ? (
+                <div className="px-4 py-5 text-sm text-zinc-400">Ładowanie widoku...</div>
+            ) : releases.items.length > 0 ? (
+                <>
+                    <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+                        Wyniki: {releases.total}
+                    </div>
+
+                    <ul className="divide-y divide-zinc-800">
+                        {releases.items.map((item) => (
+                            <li
+                                key={`${source}-${item.gameId}`}
+                                className="bg-zinc-900/50 px-4 py-3"
+                            >
+                                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+                                    <div className="flex min-w-0 gap-3">
+                                        <Cover game={item} />
+                                        <div className="min-w-0 self-center">
+                                            <p className="truncate text-sm font-medium text-zinc-100">
+                                                {item.title}
+                                            </p>
+                                            <p className="mt-1 text-xs text-zinc-400">
+                                                {formatRelease(item)}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="self-center text-sm text-zinc-300">
+                                        {source === 'mine' ? (
+                                            <>
+                                                <p>
+                                                    Status gry:{' '}
+                                                    {item.userGameStatus
+                                                        ? statusLabels[
+                                                              item.userGameStatus
+                                                          ]
+                                                        : 'brak'}
+                                                </p>
+                                                <p className="mt-1 text-zinc-400">
+                                                    Interest:{' '}
+                                                    {item.interest !== undefined
+                                                        ? item.interest
+                                                        : 'brak'}
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <p className="text-zinc-400">
+                                                Katalog główny
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="self-center text-sm text-zinc-400 md:text-right">
+                                        {item.releaseYear !== undefined ? (
+                                            <p>Rok: {item.releaseYear}</p>
+                                        ) : (
+                                            <p>Rok: brak</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={releases.page <= 1}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Poprzednia
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => current + 1)}
+                            disabled={!releases.hasMore}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Następna
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className="px-4 py-5 text-sm text-zinc-400">
+                    Brak gier dla wybranych filtrów premier.
                 </div>
             )}
         </section>
@@ -2193,6 +2441,7 @@ export const LibraryPage = () => {
             {activeView === 'backlog' ? <BacklogPanel /> : null}
             {activeView === 'active' ? <ActiveRunsPanel /> : null}
             {activeView === 'history' ? <HistoryPanel /> : null}
+            {activeView === 'releases' ? <ReleaseCalendarPanel /> : null}
         </div>
     )
 }

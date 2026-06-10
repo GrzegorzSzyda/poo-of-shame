@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add yearly run history tab
+Add releases tab with my and catalog variants
 ```
 
 Zawiera:
@@ -81,6 +81,10 @@ Zawiera:
 - backendowe query `listMyRunHistoryByYear`,
 - `Historia` ma wybór roku oraz sekcje: rozpoczęte, ukończone, wymaksowane,
   porzucone i bez konkretnego roku.
+- aktywny widok `Premiery`,
+- backendowe query `listMyReleaseCalendar` i `listCatalogReleaseCalendar`,
+- `Premiery` ma dwa warianty: `Moje premiery` i `Katalog`,
+- oba warianty maja filtrowanie po tytule, roku albo `brak roku`.
 
 Push wykonany na `origin/rewrite`.
 
@@ -170,6 +174,7 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
 Priorytet implementacji:
 
-- `Premiery`: moje premiery i premiery z katalogu.
+- dopracowanie szczegolow UX widokow biblioteki,
+- ewentualne dodatkowe filtry i lepsze sortowanie widokow premier.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

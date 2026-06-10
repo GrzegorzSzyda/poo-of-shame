@@ -268,7 +268,10 @@ Zasady:
 - aktywny jest tez widok `Historia` z wyborem roku i sekcjami opartymi o
   `gameRuns`: rozpoczęte, ukończone, wymaksowane, porzucone oraz bez
   konkretnego roku,
-- kolejny widok do zrobienia to `Premiery`.
+- aktywny jest tez widok `Premiery` z dwoma wariantami:
+  `Moje premiery` i `Katalog`,
+- oba warianty maja filtrowanie po tytule, roku premiery albo `brak roku` oraz
+  prosta paginacje.
 
 ## Lokalna Praca
 

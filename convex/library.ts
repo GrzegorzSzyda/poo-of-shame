@@ -58,6 +58,11 @@ const backlogStatusFilterValidator = v.union(
     v.literal('wanted'),
     v.literal('owned'),
 )
+const releaseYearFilterValidator = v.union(
+    v.literal('all'),
+    v.literal('unknown'),
+    v.number(),
+)
 
 type UserGameStatus =
     | 'wanted'
@@ -340,6 +345,21 @@ const toHistoryRunListItem = (
         : null,
 })
 
+const toReleaseListItem = (game: Doc<'games'>, userGame?: Doc<'userGames'> | null) => ({
+    gameId: game._id,
+    title: game.title,
+    releaseDate: game.releaseDate,
+    releaseYear: game.releaseYear,
+    releaseQuarter: game.releaseQuarter,
+    releaseYearMonth: game.releaseYearMonth,
+    releaseText: game.releaseText,
+    coverImageUrl: game.coverImageUrl,
+    userGameId: userGame?._id,
+    userGameStatus: userGame?.status,
+    interest: userGame?.interest,
+    updatedAt: userGame?.updatedAt,
+})
+
 const matchesLibraryAllFilters = (
     userGame: Doc<'userGames'>,
     filters: {
@@ -467,6 +487,52 @@ const runMatchesYear = (
 
 const runHasConcreteYear = (run: Doc<'gameRuns'>, prefix: 'started' | 'finished') =>
     run[`${prefix}Year`] !== undefined || run[`${prefix}YearMonth`] !== undefined
+
+const getReleaseSortKey = (game: {
+    releaseDate?: string
+    releaseYearMonth?: string
+    releaseYear?: number
+    releaseQuarter?: number
+    releaseText?: string
+}) => {
+    if (game.releaseDate) return `0:${game.releaseDate}`
+    if (game.releaseYearMonth) return `1:${game.releaseYearMonth}`
+    if (game.releaseYear !== undefined && game.releaseQuarter !== undefined) {
+        return `2:${game.releaseYear}-${game.releaseQuarter}`
+    }
+    if (game.releaseYear !== undefined) return `3:${game.releaseYear}`
+    if (game.releaseText) return `4:${game.releaseText.toLowerCase()}`
+    return '5:unknown'
+}
+
+const sortReleaseItems = (
+    left: ReturnType<typeof toReleaseListItem>,
+    right: ReturnType<typeof toReleaseListItem>,
+) => {
+    const leftKey = getReleaseSortKey(left)
+    const rightKey = getReleaseSortKey(right)
+
+    if (leftKey !== rightKey) {
+        return leftKey.localeCompare(rightKey)
+    }
+
+    return left.title.localeCompare(right.title)
+}
+
+const matchesReleaseYearFilter = (
+    game: Doc<'games'>,
+    yearFilter: 'all' | 'unknown' | number,
+) => {
+    if (yearFilter === 'all') {
+        return true
+    }
+
+    if (yearFilter === 'unknown') {
+        return game.releaseYear === undefined
+    }
+
+    return game.releaseYear === yearFilter
+}
 
 const findLatestRunForUserGame = async (
     ctx: MutationCtx,
@@ -990,6 +1056,119 @@ export const listMyRunHistoryByYear = query({
                 dropped,
                 withoutConcreteYear,
             },
+        }
+    },
+})
+
+export const listMyReleaseCalendar = query({
+    args: {
+        searchText: v.optional(v.string()),
+        yearFilter: releaseYearFilterValidator,
+        page: v.number(),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const pageSize = Math.min(Math.max(Math.floor(args.pageSize ?? 25), 1), 50)
+        const page = Math.max(Math.floor(args.page), 1)
+        const offset = (page - 1) * pageSize
+        const searchText = normalizeGameTitle(args.searchText ?? '')
+        const userGames = await ctx.db
+            .query('userGames')
+            .withIndex('by_user', (q) => q.eq('userId', identity.subject))
+            .collect()
+
+        const joinedItems = await Promise.all(
+            userGames.map(async (userGame) => {
+                const game = await ctx.db.get(userGame.gameId)
+
+                if (!game) {
+                    return null
+                }
+
+                if (
+                    searchText.length >= 2 &&
+                    !game.titleNormalized.startsWith(searchText)
+                ) {
+                    return null
+                }
+
+                if (!matchesReleaseYearFilter(game, args.yearFilter)) {
+                    return null
+                }
+
+                return toReleaseListItem(game, userGame)
+            }),
+        )
+
+        const items = joinedItems.filter((item) => item !== null).sort(sortReleaseItems)
+        const availableYears = Array.from(
+            new Set(
+                joinedItems
+                    .flatMap((item) =>
+                        item?.releaseYear !== undefined ? [item.releaseYear] : [],
+                    )
+                    .filter((value): value is number => value !== undefined),
+            ),
+        ).sort((left, right) => left - right)
+
+        return {
+            items: items.slice(offset, offset + pageSize),
+            total: items.length,
+            page,
+            pageSize,
+            hasMore: offset + pageSize < items.length,
+            availableYears,
+        }
+    },
+})
+
+export const listCatalogReleaseCalendar = query({
+    args: {
+        searchText: v.optional(v.string()),
+        yearFilter: releaseYearFilterValidator,
+        page: v.number(),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAuthenticated(ctx)
+        const pageSize = Math.min(Math.max(Math.floor(args.pageSize ?? 25), 1), 50)
+        const page = Math.max(Math.floor(args.page), 1)
+        const offset = (page - 1) * pageSize
+        const searchText = normalizeGameTitle(args.searchText ?? '')
+        const games = await ctx.db.query('games').collect()
+
+        const filteredItems = games
+            .filter((game) => {
+                if (
+                    searchText.length >= 2 &&
+                    !game.titleNormalized.startsWith(searchText)
+                ) {
+                    return false
+                }
+
+                return matchesReleaseYearFilter(game, args.yearFilter)
+            })
+            .map((game) => toReleaseListItem(game))
+            .sort(sortReleaseItems)
+
+        const availableYears = Array.from(
+            new Set(
+                games
+                    .flatMap((game) =>
+                        game.releaseYear !== undefined ? [game.releaseYear] : [],
+                    )
+                    .filter((value): value is number => value !== undefined),
+            ),
+        ).sort((left, right) => left - right)
+
+        return {
+            items: filteredItems.slice(offset, offset + pageSize),
+            total: filteredItems.length,
+            page,
+            pageSize,
+            hasMore: offset + pageSize < filteredItems.length,
+            availableYears,
         }
     },
 })

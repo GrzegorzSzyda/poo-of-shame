@@ -173,6 +173,24 @@ Needed query patterns:
 The important rule: do not paginate first and then filter/sort in memory. Queries
 should use indexes that match the product views.
 
+## Library Views After Migration
+
+After migrating legacy `libraryEntries`, the app needs dedicated library views
+instead of one large list.
+
+Planned V1 views:
+
+- `Kupka`: backlog view for `wanted` and `owned`; it intentionally excludes
+  `playing`.
+- `Gram Teraz`: active run view based on `gameRuns.status = playing`.
+- `Historia`: yearly/monthly history based on `gameRuns`, grouped into started,
+  completed, mastered, and dropped runs.
+- `Premiery`: both user's release calendar and catalog-wide release calendar.
+- `Wszystkie`: technical control view with filters for migration verification and
+  cleanup.
+
+Detailed scope is tracked in `docs/library-views.md`.
+
 ## Next Implementation Step
 
 Current completed slice:

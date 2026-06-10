@@ -48,6 +48,9 @@ Nowe tabele rewrite:
 Migracja jest przygotowana addytywnie i oznacza stare wpisy jako zmigrowane,
 ale ich nie usuwa.
 
+Po migracji pojedyncza lista `/library` nie wystarcza do pracy na danych.
+Kierunek nowych widokow jest opisany w `docs/library-views.md`.
+
 ## Model Domenowy
 
 ### `games`
@@ -285,8 +288,9 @@ PORT=3002 bun run dev
 
 ## Najblizsze Sensowne Kroki
 
-1. Uruchomic migracje z `/admin/migration` partiami i sprawdzic wyniki w
-   `/library`.
-2. Dodac wybor glownego runu, czyli kontrolowane ustawianie `pinnedRunId`.
-3. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
+1. Zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
+2. Zaczac od widoku `Wszystkie` z filtrowaniem, limitem i/lub stronicowaniem.
+3. Dodac widok `Kupka` bez statusu `playing`.
+4. Dodac wybor glownego runu, czyli kontrolowane ustawianie `pinnedRunId`.
+5. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
    szybko przestanie wystarczac.

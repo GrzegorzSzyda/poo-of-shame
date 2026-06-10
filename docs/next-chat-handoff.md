@@ -113,6 +113,7 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `convex/migrations.ts` - admin-only migracja `libraryEntries`.
 - `docs/current-state.md` - aktualna dokumentacja techniczna.
 - `docs/product-v1.md` - kierunek produktu.
+- `docs/library-views.md` - plan widokow biblioteki po migracji.
 
 ## Komendy Weryfikacyjne
 
@@ -145,9 +146,15 @@ PORT=3002 bun run dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to uruchomic migracje z `/admin/migration` partiami,
-sprawdzic wyniki w `/library`, a potem domknac wybor glownego runu:
+Migracja zostala uruchomiona przez uzytkownika. Najlepszy kolejny krok to
+zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
-- lepszy wybor, ktory run jest `pinnedRunId`.
+Priorytet implementacji:
+
+- `Wszystkie` z filtrowaniem i limitem/stronicowaniem,
+- `Kupka` bez statusu `playing`,
+- `Gram Teraz` oparty o `gameRuns.status = playing`,
+- `Historia` z wyborem roku,
+- `Premiery`: moje premiery i premiery z katalogu.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

@@ -26,6 +26,7 @@ referencje, ale nowa implementacja powstaje od zera na branchu `rewrite`.
 - `docs/product-v1.md` - kierunek produktu i decyzje domenowe.
 - `docs/current-state.md` - aktualna architektura i zaimplementowane funkcje.
 - `docs/next-chat-handoff.md` - skrot dla kolejnych sesji z asystentem.
+- `docs/library-views.md` - plan widokow biblioteki po migracji.
 
 ## Development
 

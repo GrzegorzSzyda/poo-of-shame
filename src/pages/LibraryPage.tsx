@@ -23,7 +23,7 @@ type GameRunType =
     | 'coop'
     | 'other'
 
-type RunDatePrecision = 'unknown' | 'exact'
+type RunDatePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
 
 type CatalogSearchGame = {
     _id: Id<'games'>
@@ -46,8 +46,42 @@ type GameRun = {
     note?: string
     startedPrecision: RunDatePrecision
     startedDate?: string
+    startedYear?: number
+    startedQuarter?: number
+    startedMonth?: number
+    startedText?: string
+    startedYearMonth?: string
     finishedPrecision: RunDatePrecision
     finishedDate?: string
+    finishedYear?: number
+    finishedQuarter?: number
+    finishedMonth?: number
+    finishedText?: string
+    finishedYearMonth?: string
+}
+
+type RunDateFormValue = {
+    precision: RunDatePrecision
+    date: string
+    year: string
+    quarter: string
+    month: string
+    text: string
+}
+
+type RunDateMutationFields = {
+    startedPrecision?: RunDatePrecision
+    startedDate?: string
+    startedYear?: number
+    startedQuarter?: number
+    startedMonth?: number
+    startedText?: string
+    finishedPrecision?: RunDatePrecision
+    finishedDate?: string
+    finishedYear?: number
+    finishedQuarter?: number
+    finishedMonth?: number
+    finishedText?: string
 }
 
 type LibraryEntry = {
@@ -106,6 +140,15 @@ const runTypeLabels = Object.fromEntries(
     runTypeOptions.map((option) => [option.value, option.label]),
 ) as Record<GameRunType, string>
 
+const runDatePrecisionOptions: Array<{ value: RunDatePrecision; label: string }> = [
+    { value: 'unknown', label: 'Brak daty' },
+    { value: 'exact', label: 'Dokładna data' },
+    { value: 'year', label: 'Rok' },
+    { value: 'quarter', label: 'Kwartał' },
+    { value: 'month', label: 'Miesiąc' },
+    { value: 'text', label: 'Opis tekstowy' },
+]
+
 const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
 
 const shouldShowInterest = (status: UserGameStatus) => interestStatuses.has(status)
@@ -158,6 +201,34 @@ const getLibraryErrorMessage = (error: unknown, fallback: string) => {
         return 'Data zakończenia runu jest nieprawidłowa.'
     }
 
+    if (
+        message.includes('STARTED_YEAR_INVALID') ||
+        message.includes('FINISHED_YEAR_INVALID')
+    ) {
+        return 'Rok runu musi być liczbą z zakresu 1950-2200.'
+    }
+
+    if (
+        message.includes('STARTED_QUARTER_INVALID') ||
+        message.includes('FINISHED_QUARTER_INVALID')
+    ) {
+        return 'Kwartał runu musi być z zakresu Q1-Q4.'
+    }
+
+    if (
+        message.includes('STARTED_MONTH_INVALID') ||
+        message.includes('FINISHED_MONTH_INVALID')
+    ) {
+        return 'Miesiąc runu musi być z zakresu 1-12.'
+    }
+
+    if (
+        message.includes('STARTED_TEXT_REQUIRED') ||
+        message.includes('FINISHED_TEXT_REQUIRED')
+    ) {
+        return 'Opis daty runu nie może być pusty.'
+    }
+
     if (message.includes('INTEREST_INVALID')) {
         return 'Zainteresowanie musi być w zakresie 0-100.'
     }
@@ -191,8 +262,163 @@ const Cover = ({ game }: { game: { title: string; coverImageUrl?: string } }) =>
         </div>
     )
 
-const formatRunDate = (precision: RunDatePrecision, date?: string) =>
-    precision === 'exact' && date ? date : 'brak daty'
+const createEmptyRunDateFormValue = (): RunDateFormValue => ({
+    precision: 'unknown',
+    date: '',
+    year: '',
+    quarter: '1',
+    month: '1',
+    text: '',
+})
+
+const createRunDateFormValue = (
+    prefix: 'started' | 'finished',
+    run: GameRun,
+): RunDateFormValue => ({
+    precision: run[`${prefix}Precision`],
+    date: run[`${prefix}Date`] ?? '',
+    year: run[`${prefix}Year`] !== undefined ? String(run[`${prefix}Year`]) : '',
+    quarter:
+        run[`${prefix}Quarter`] !== undefined ? String(run[`${prefix}Quarter`]) : '1',
+    month: run[`${prefix}Month`] !== undefined ? String(run[`${prefix}Month`]) : '1',
+    text: run[`${prefix}Text`] ?? '',
+})
+
+const toRunDateMutationFields = (
+    prefix: 'started' | 'finished',
+    value: RunDateFormValue,
+): RunDateMutationFields => ({
+    [`${prefix}Precision`]: value.precision,
+    [`${prefix}Date`]: value.precision === 'exact' && value.date ? value.date : undefined,
+    [`${prefix}Year`]:
+        value.precision === 'year' ||
+        value.precision === 'quarter' ||
+        value.precision === 'month'
+            ? Number(value.year)
+            : undefined,
+    [`${prefix}Quarter`]:
+        value.precision === 'quarter' ? Number(value.quarter) : undefined,
+    [`${prefix}Month`]: value.precision === 'month' ? Number(value.month) : undefined,
+    [`${prefix}Text`]:
+        value.precision === 'text' && value.text.trim().length > 0
+            ? value.text.trim()
+            : undefined,
+})
+
+const formatRunDate = (run: GameRun, prefix: 'started' | 'finished') => {
+    const precision = run[`${prefix}Precision`]
+
+    if (precision === 'exact' && run[`${prefix}Date`]) return run[`${prefix}Date`]
+    if (precision === 'month' && run[`${prefix}YearMonth`]) {
+        return run[`${prefix}YearMonth`]
+    }
+    if (precision === 'quarter' && run[`${prefix}Year`] && run[`${prefix}Quarter`]) {
+        return `${run[`${prefix}Year`]} Q${run[`${prefix}Quarter`]}`
+    }
+    if (precision === 'year' && run[`${prefix}Year`]) {
+        return String(run[`${prefix}Year`])
+    }
+    if (precision === 'text' && run[`${prefix}Text`]) return run[`${prefix}Text`]
+    return 'brak daty'
+}
+
+const RunDateFields = ({
+    idPrefix,
+    label,
+    value,
+    onChange,
+}: {
+    idPrefix: string
+    label: string
+    value: RunDateFormValue
+    onChange: (value: RunDateFormValue) => void
+}) => {
+    const setValue = <Key extends keyof RunDateFormValue>(
+        key: Key,
+        nextValue: RunDateFormValue[Key],
+    ) => onChange({ ...value, [key]: nextValue })
+
+    return (
+        <div className="space-y-2 rounded-md border border-zinc-800 p-3">
+            <label htmlFor={`${idPrefix}-precision`} className="text-sm text-zinc-300">
+                {label}
+            </label>
+            <select
+                id={`${idPrefix}-precision`}
+                value={value.precision}
+                onChange={(event) =>
+                    setValue('precision', event.target.value as RunDatePrecision)
+                }
+                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+            >
+                {runDatePrecisionOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
+                ))}
+            </select>
+
+            {value.precision === 'exact' ? (
+                <input
+                    type="date"
+                    value={value.date}
+                    onChange={(event) => setValue('date', event.target.value)}
+                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                />
+            ) : null}
+
+            {value.precision === 'year' ||
+            value.precision === 'quarter' ||
+            value.precision === 'month' ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                    <input
+                        type="number"
+                        value={value.year}
+                        onChange={(event) => setValue('year', event.target.value)}
+                        className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                        placeholder="2026"
+                    />
+                    {value.precision === 'quarter' ? (
+                        <select
+                            value={value.quarter}
+                            onChange={(event) => setValue('quarter', event.target.value)}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            <option value="1">Q1</option>
+                            <option value="2">Q2</option>
+                            <option value="3">Q3</option>
+                            <option value="4">Q4</option>
+                        </select>
+                    ) : null}
+                    {value.precision === 'month' ? (
+                        <select
+                            value={value.month}
+                            onChange={(event) => setValue('month', event.target.value)}
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {Array.from({ length: 12 }, (_, index) => index + 1).map(
+                                (month) => (
+                                    <option key={month} value={month}>
+                                        {String(month).padStart(2, '0')}
+                                    </option>
+                                ),
+                            )}
+                        </select>
+                    ) : null}
+                </div>
+            ) : null}
+
+            {value.precision === 'text' ? (
+                <input
+                    value={value.text}
+                    onChange={(event) => setValue('text', event.target.value)}
+                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                    placeholder="np. wakacje 2024"
+                />
+            ) : null}
+        </div>
+    )
+}
 
 const getRunSuggestionForGameStatus = (status: UserGameStatus) => {
     switch (status) {
@@ -242,14 +468,12 @@ const RunListItem = ({ run }: { run: GameRun }) => {
     const [rating, setRating] = useState(run.rating ?? 0)
     const [hasRating, setHasRating] = useState(run.rating !== undefined)
     const [note, setNote] = useState(run.note ?? '')
-    const [startedPrecision, setStartedPrecision] = useState<RunDatePrecision>(
-        run.startedPrecision,
+    const [startedDate, setStartedDate] = useState(() =>
+        createRunDateFormValue('started', run),
     )
-    const [startedDate, setStartedDate] = useState(run.startedDate ?? '')
-    const [finishedPrecision, setFinishedPrecision] = useState<RunDatePrecision>(
-        run.finishedPrecision,
+    const [finishedDate, setFinishedDate] = useState(() =>
+        createRunDateFormValue('finished', run),
     )
-    const [finishedDate, setFinishedDate] = useState(run.finishedDate ?? '')
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
@@ -261,10 +485,8 @@ const RunListItem = ({ run }: { run: GameRun }) => {
         setRating(run.rating ?? 0)
         setHasRating(run.rating !== undefined)
         setNote(run.note ?? '')
-        setStartedPrecision(run.startedPrecision)
-        setStartedDate(run.startedDate ?? '')
-        setFinishedPrecision(run.finishedPrecision)
-        setFinishedDate(run.finishedDate ?? '')
+        setStartedDate(createRunDateFormValue('started', run))
+        setFinishedDate(createRunDateFormValue('finished', run))
         setError(null)
     }
 
@@ -281,10 +503,8 @@ const RunListItem = ({ run }: { run: GameRun }) => {
                 runType: runType || undefined,
                 rating: hasRating ? rating : undefined,
                 note: note.trim().length > 0 ? note.trim() : undefined,
-                startedPrecision,
-                startedDate: startedPrecision === 'exact' ? startedDate : undefined,
-                finishedPrecision,
-                finishedDate: finishedPrecision === 'exact' ? finishedDate : undefined,
+                ...toRunDateMutationFields('started', startedDate),
+                ...toRunDateMutationFields('finished', finishedDate),
             })
             setIsEditing(false)
             setIsConfirmingDelete(false)
@@ -326,10 +546,10 @@ const RunListItem = ({ run }: { run: GameRun }) => {
                     ) : null}
                 </div>
                 <p className="text-sm text-zinc-400">
-                    Start: {formatRunDate(run.startedPrecision, run.startedDate)}
+                    Start: {formatRunDate(run, 'started')}
                 </p>
                 <p className="text-sm text-zinc-400">
-                    Koniec: {formatRunDate(run.finishedPrecision, run.finishedDate)}
+                    Koniec: {formatRunDate(run, 'finished')}
                 </p>
                 <div className="flex flex-wrap gap-2 md:justify-end">
                     <button
@@ -425,57 +645,18 @@ const RunListItem = ({ run }: { run: GameRun }) => {
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2">
-                        <div className="space-y-2 rounded-md border border-zinc-800 p-3">
-                            <label className="text-sm text-zinc-300">Start</label>
-                            <select
-                                value={startedPrecision}
-                                onChange={(event) =>
-                                    setStartedPrecision(
-                                        event.target.value as RunDatePrecision,
-                                    )
-                                }
-                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
-                            >
-                                <option value="unknown">Brak daty</option>
-                                <option value="exact">Dokładna data</option>
-                            </select>
-                            {startedPrecision === 'exact' ? (
-                                <input
-                                    type="date"
-                                    value={startedDate}
-                                    onChange={(event) =>
-                                        setStartedDate(event.target.value)
-                                    }
-                                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
-                                />
-                            ) : null}
-                        </div>
-
-                        <div className="space-y-2 rounded-md border border-zinc-800 p-3">
-                            <label className="text-sm text-zinc-300">Koniec</label>
-                            <select
-                                value={finishedPrecision}
-                                onChange={(event) =>
-                                    setFinishedPrecision(
-                                        event.target.value as RunDatePrecision,
-                                    )
-                                }
-                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
-                            >
-                                <option value="unknown">Brak daty</option>
-                                <option value="exact">Dokładna data</option>
-                            </select>
-                            {finishedPrecision === 'exact' ? (
-                                <input
-                                    type="date"
-                                    value={finishedDate}
-                                    onChange={(event) =>
-                                        setFinishedDate(event.target.value)
-                                    }
-                                    className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
-                                />
-                            ) : null}
-                        </div>
+                        <RunDateFields
+                            idPrefix={`run-edit-started-${run._id}`}
+                            label="Start"
+                            value={startedDate}
+                            onChange={setStartedDate}
+                        />
+                        <RunDateFields
+                            idPrefix={`run-edit-finished-${run._id}`}
+                            label="Koniec"
+                            value={finishedDate}
+                            onChange={setFinishedDate}
+                        />
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)]">
@@ -552,11 +733,8 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
     const [rating, setRating] = useState(0)
     const [hasRating, setHasRating] = useState(false)
     const [note, setNote] = useState('')
-    const [startedPrecision, setStartedPrecision] = useState<RunDatePrecision>('unknown')
-    const [startedDate, setStartedDate] = useState('')
-    const [finishedPrecision, setFinishedPrecision] =
-        useState<RunDatePrecision>('unknown')
-    const [finishedDate, setFinishedDate] = useState('')
+    const [startedDate, setStartedDate] = useState(createEmptyRunDateFormValue)
+    const [finishedDate, setFinishedDate] = useState(createEmptyRunDateFormValue)
     const [message, setMessage] = useState<string | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -575,10 +753,8 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
                 runType: runType || undefined,
                 rating: hasRating ? rating : undefined,
                 note: note.trim().length > 0 ? note.trim() : undefined,
-                startedPrecision,
-                startedDate: startedPrecision === 'exact' ? startedDate : undefined,
-                finishedPrecision,
-                finishedDate: finishedPrecision === 'exact' ? finishedDate : undefined,
+                ...toRunDateMutationFields('started', startedDate),
+                ...toRunDateMutationFields('finished', finishedDate),
             })
             setStatus('planned')
             setRunType('first_playthrough')
@@ -586,10 +762,8 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
             setRating(0)
             setHasRating(false)
             setNote('')
-            setStartedPrecision('unknown')
-            setStartedDate('')
-            setFinishedPrecision('unknown')
-            setFinishedDate('')
+            setStartedDate(createEmptyRunDateFormValue())
+            setFinishedDate(createEmptyRunDateFormValue())
             setMessage('Dodano run.')
         } catch (error) {
             setError(getLibraryErrorMessage(error, 'Nie udało się dodać runu.'))
@@ -686,65 +860,18 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
-                    <div className="space-y-2 rounded-md border border-zinc-800 p-3">
-                        <label
-                            htmlFor={`run-started-precision-${userGameId}`}
-                            className="text-sm text-zinc-300"
-                        >
-                            Start
-                        </label>
-                        <select
-                            id={`run-started-precision-${userGameId}`}
-                            value={startedPrecision}
-                            onChange={(event) =>
-                                setStartedPrecision(
-                                    event.target.value as RunDatePrecision,
-                                )
-                            }
-                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
-                        >
-                            <option value="unknown">Brak daty</option>
-                            <option value="exact">Dokładna data</option>
-                        </select>
-                        {startedPrecision === 'exact' ? (
-                            <input
-                                type="date"
-                                value={startedDate}
-                                onChange={(event) => setStartedDate(event.target.value)}
-                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
-                            />
-                        ) : null}
-                    </div>
-
-                    <div className="space-y-2 rounded-md border border-zinc-800 p-3">
-                        <label
-                            htmlFor={`run-finished-precision-${userGameId}`}
-                            className="text-sm text-zinc-300"
-                        >
-                            Koniec
-                        </label>
-                        <select
-                            id={`run-finished-precision-${userGameId}`}
-                            value={finishedPrecision}
-                            onChange={(event) =>
-                                setFinishedPrecision(
-                                    event.target.value as RunDatePrecision,
-                                )
-                            }
-                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
-                        >
-                            <option value="unknown">Brak daty</option>
-                            <option value="exact">Dokładna data</option>
-                        </select>
-                        {finishedPrecision === 'exact' ? (
-                            <input
-                                type="date"
-                                value={finishedDate}
-                                onChange={(event) => setFinishedDate(event.target.value)}
-                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
-                            />
-                        ) : null}
-                    </div>
+                    <RunDateFields
+                        idPrefix={`run-started-${userGameId}`}
+                        label="Start"
+                        value={startedDate}
+                        onChange={setStartedDate}
+                    />
+                    <RunDateFields
+                        idPrefix={`run-finished-${userGameId}`}
+                        label="Koniec"
+                        value={finishedDate}
+                        onChange={setFinishedDate}
+                    />
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-[12rem_minmax(0,1fr)]">

@@ -219,8 +219,8 @@ Zasady:
 - dodanie runu aktualizuje `lastRunId`, a pierwszy run ustawia tez
   `pinnedRunId`,
 - formularz runu obsluguje status, opcjonalny typ, opcjonalny label, opcjonalna
-  ocene, opcjonalna notatke oraz daty startu/konca tylko jako `unknown` albo
-  `exact`,
+  ocene, opcjonalna notatke oraz daty startu/konca z precyzjami `unknown`,
+  `exact`, `year`, `quarter`, `month` i `text`,
 - istniejace runy mozna edytowac inline,
 - istniejace runy mozna usuwac z potwierdzeniem; jesli usuwany run byl
   `lastRunId` albo `pinnedRunId`, backend przestawia wskazanie na najnowszy

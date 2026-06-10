@@ -30,7 +30,14 @@ const gameRunTypeValidator = v.union(
     v.literal('other'),
 )
 
-const runDatePrecisionValidator = v.union(v.literal('exact'), v.literal('unknown'))
+const runDatePrecisionValidator = v.union(
+    v.literal('exact'),
+    v.literal('year'),
+    v.literal('quarter'),
+    v.literal('month'),
+    v.literal('text'),
+    v.literal('unknown'),
+)
 const runSuggestionModeValidator = v.union(v.literal('latest'), v.literal('new'))
 
 type UserGameStatus =
@@ -42,7 +49,7 @@ type UserGameStatus =
     | 'dropped'
 
 type GameRunStatus = 'planned' | 'playing' | 'completed' | 'mastered' | 'dropped'
-type RunDatePrecision = 'exact' | 'unknown'
+type RunDatePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
 
 const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
 
@@ -84,10 +91,51 @@ const isValidIsoDate = (value: string) => {
 
 const toYearMonth = (date: string) => date.slice(0, 7)
 
+const toYearMonthFromParts = (year: number, month: number) =>
+    `${year}-${String(month).padStart(2, '0')}`
+
+const normalizeDateText = (value: string) => value.trim().replace(/\s+/g, ' ')
+
+const assertRunYear = (prefix: 'started' | 'finished', year: number | undefined) => {
+    if (!Number.isInteger(year) || year < 1950 || year > 2200) {
+        throw new ConvexError(
+            prefix === 'started' ? 'STARTED_YEAR_INVALID' : 'FINISHED_YEAR_INVALID',
+        )
+    }
+    return year
+}
+
+const assertRunQuarter = (
+    prefix: 'started' | 'finished',
+    quarter: number | undefined,
+) => {
+    if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) {
+        throw new ConvexError(
+            prefix === 'started' ? 'STARTED_QUARTER_INVALID' : 'FINISHED_QUARTER_INVALID',
+        )
+    }
+    return quarter
+}
+
+const assertRunMonth = (prefix: 'started' | 'finished', month: number | undefined) => {
+    if (!Number.isInteger(month) || month < 1 || month > 12) {
+        throw new ConvexError(
+            prefix === 'started' ? 'STARTED_MONTH_INVALID' : 'FINISHED_MONTH_INVALID',
+        )
+    }
+    return month
+}
+
 const buildRunDateFields = (
     prefix: 'started' | 'finished',
     precision: RunDatePrecision,
-    date?: string,
+    input: {
+        date?: string
+        year?: number
+        quarter?: number
+        month?: number
+        text?: string
+    },
 ) => {
     if (precision === 'unknown') {
         return {
@@ -101,19 +149,81 @@ const buildRunDateFields = (
         }
     }
 
-    const trimmedDate = date?.trim() ?? ''
-    if (!isValidIsoDate(trimmedDate)) {
+    if (precision === 'exact') {
+        const trimmedDate = input.date?.trim() ?? ''
+        if (!isValidIsoDate(trimmedDate)) {
+            throw new ConvexError(
+                prefix === 'started' ? 'STARTED_DATE_INVALID' : 'FINISHED_DATE_INVALID',
+            )
+        }
+
+        return {
+            [`${prefix}Precision`]: precision,
+            [`${prefix}Date`]: trimmedDate,
+            [`${prefix}Year`]: Number(trimmedDate.slice(0, 4)),
+            [`${prefix}Quarter`]: undefined,
+            [`${prefix}Month`]: Number(trimmedDate.slice(5, 7)),
+            [`${prefix}Text`]: undefined,
+            [`${prefix}YearMonth`]: toYearMonth(trimmedDate),
+        }
+    }
+
+    if (precision === 'year') {
+        const year = assertRunYear(prefix, input.year)
+        return {
+            [`${prefix}Precision`]: precision,
+            [`${prefix}Date`]: undefined,
+            [`${prefix}Year`]: year,
+            [`${prefix}Quarter`]: undefined,
+            [`${prefix}Month`]: undefined,
+            [`${prefix}Text`]: undefined,
+            [`${prefix}YearMonth`]: undefined,
+        }
+    }
+
+    if (precision === 'quarter') {
+        const year = assertRunYear(prefix, input.year)
+        const quarter = assertRunQuarter(prefix, input.quarter)
+        return {
+            [`${prefix}Precision`]: precision,
+            [`${prefix}Date`]: undefined,
+            [`${prefix}Year`]: year,
+            [`${prefix}Quarter`]: quarter,
+            [`${prefix}Month`]: undefined,
+            [`${prefix}Text`]: undefined,
+            [`${prefix}YearMonth`]: undefined,
+        }
+    }
+
+    if (precision === 'month') {
+        const year = assertRunYear(prefix, input.year)
+        const month = assertRunMonth(prefix, input.month)
+        return {
+            [`${prefix}Precision`]: precision,
+            [`${prefix}Date`]: undefined,
+            [`${prefix}Year`]: year,
+            [`${prefix}Quarter`]: undefined,
+            [`${prefix}Month`]: month,
+            [`${prefix}Text`]: undefined,
+            [`${prefix}YearMonth`]: toYearMonthFromParts(year, month),
+        }
+    }
+
+    const text = normalizeDateText(input.text ?? '')
+    if (text.length === 0) {
         throw new ConvexError(
-            prefix === 'started' ? 'STARTED_DATE_INVALID' : 'FINISHED_DATE_INVALID',
+            prefix === 'started' ? 'STARTED_TEXT_REQUIRED' : 'FINISHED_TEXT_REQUIRED',
         )
     }
 
     return {
         [`${prefix}Precision`]: precision,
-        [`${prefix}Date`]: trimmedDate,
-        [`${prefix}Year`]: Number(trimmedDate.slice(0, 4)),
-        [`${prefix}Month`]: Number(trimmedDate.slice(5, 7)),
-        [`${prefix}YearMonth`]: toYearMonth(trimmedDate),
+        [`${prefix}Date`]: undefined,
+        [`${prefix}Year`]: undefined,
+        [`${prefix}Quarter`]: undefined,
+        [`${prefix}Month`]: undefined,
+        [`${prefix}Text`]: text,
+        [`${prefix}YearMonth`]: undefined,
     }
 }
 
@@ -149,8 +259,18 @@ const toRunListItem = (run: Doc<'gameRuns'>) => ({
     note: run.note,
     startedPrecision: run.startedPrecision,
     startedDate: run.startedDate,
+    startedYear: run.startedYear,
+    startedQuarter: run.startedQuarter,
+    startedMonth: run.startedMonth,
+    startedText: run.startedText,
+    startedYearMonth: run.startedYearMonth,
     finishedPrecision: run.finishedPrecision,
     finishedDate: run.finishedDate,
+    finishedYear: run.finishedYear,
+    finishedQuarter: run.finishedQuarter,
+    finishedMonth: run.finishedMonth,
+    finishedText: run.finishedText,
+    finishedYearMonth: run.finishedYearMonth,
     createdAt: run.createdAt,
     updatedAt: run.updatedAt,
 })
@@ -204,8 +324,16 @@ const buildRunPatch = (args: {
     note?: string
     startedPrecision: RunDatePrecision
     startedDate?: string
+    startedYear?: number
+    startedQuarter?: number
+    startedMonth?: number
+    startedText?: string
     finishedPrecision: RunDatePrecision
     finishedDate?: string
+    finishedYear?: number
+    finishedQuarter?: number
+    finishedMonth?: number
+    finishedText?: string
 }) => {
     const label = args.label?.trim()
     const note = args.note?.trim()
@@ -216,8 +344,20 @@ const buildRunPatch = (args: {
         runType: args.runType,
         rating: args.rating === undefined ? undefined : assertRating(args.rating),
         note: note && note.length > 0 ? note : undefined,
-        ...buildRunDateFields('started', args.startedPrecision, args.startedDate),
-        ...buildRunDateFields('finished', args.finishedPrecision, args.finishedDate),
+        ...buildRunDateFields('started', args.startedPrecision, {
+            date: args.startedDate,
+            year: args.startedYear,
+            quarter: args.startedQuarter,
+            month: args.startedMonth,
+            text: args.startedText,
+        }),
+        ...buildRunDateFields('finished', args.finishedPrecision, {
+            date: args.finishedDate,
+            year: args.finishedYear,
+            quarter: args.finishedQuarter,
+            month: args.finishedMonth,
+            text: args.finishedText,
+        }),
     }
 }
 
@@ -436,8 +576,16 @@ export const createGameRun = mutation({
         note: v.optional(v.string()),
         startedPrecision: runDatePrecisionValidator,
         startedDate: v.optional(v.string()),
+        startedYear: v.optional(v.number()),
+        startedQuarter: v.optional(v.number()),
+        startedMonth: v.optional(v.number()),
+        startedText: v.optional(v.string()),
         finishedPrecision: runDatePrecisionValidator,
         finishedDate: v.optional(v.string()),
+        finishedYear: v.optional(v.number()),
+        finishedQuarter: v.optional(v.number()),
+        finishedMonth: v.optional(v.number()),
+        finishedText: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const identity = await ensureAuthenticated(ctx)
@@ -542,8 +690,16 @@ export const updateGameRun = mutation({
         note: v.optional(v.string()),
         startedPrecision: runDatePrecisionValidator,
         startedDate: v.optional(v.string()),
+        startedYear: v.optional(v.number()),
+        startedQuarter: v.optional(v.number()),
+        startedMonth: v.optional(v.number()),
+        startedText: v.optional(v.string()),
         finishedPrecision: runDatePrecisionValidator,
         finishedDate: v.optional(v.string()),
+        finishedYear: v.optional(v.number()),
+        finishedQuarter: v.optional(v.number()),
+        finishedMonth: v.optional(v.number()),
+        finishedText: v.optional(v.string()),
     },
     handler: async (ctx, args) => {
         const identity = await ensureAuthenticated(ctx)

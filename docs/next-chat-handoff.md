@@ -40,7 +40,8 @@ Zawiera:
 - usuwanie wpisow z kupki z blokada, jesli istnieja powiazane `gameRuns` albo
   `gameAccess`,
 - inline panel runow pod wpisem `/library`,
-- tworzenie runu z uproszczonymi datami `unknown`/`exact`,
+- tworzenie runu z datami `unknown`, `exact`, `year`, `quarter`, `month` i
+  `text`,
 - `createGameRun` aktualizuje `lastRunId`, a pierwszy run ustawia `pinnedRunId`,
 - edycje i usuwanie runow inline,
 - opcjonalny rating i notatke per run,
@@ -51,6 +52,7 @@ Zawiera:
   albo `dropped`; status gry nie zmienia runow automatycznie,
 - szybkie akcje w sugestii: oznaczenie ostatniego runu odpowiednim statusem albo
   utworzenie nowego runu z tym statusem,
+- pelniejsze precyzje dat runow w formularzu tworzenia i edycji,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -139,9 +141,8 @@ PORT=3002 bun run dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to domkniecie flow statusow i runow:
+Najlepszy kolejny krok to domkniecie wyboru glownego runu:
 
-- pelniejsze precyzje dat dla runow (`year`, `quarter`, `month`, `text`),
 - lepszy wybor, ktory run jest `pinnedRunId`.
 
 Nie migrowac jeszcze `libraryEntries`, dopoki nowe widoki nie sa wygodne do

@@ -294,6 +294,29 @@ const toRunListItem = (run: Doc<'gameRuns'>) => ({
     updatedAt: run.updatedAt,
 })
 
+const toActiveRunListItem = (
+    run: Doc<'gameRuns'>,
+    userGame: Doc<'userGames'> | null,
+    game: Doc<'games'> | null,
+) => ({
+    ...toRunListItem(run),
+    userGameId: run.userGameId,
+    gameId: run.gameId,
+    userGameStatus: userGame?.status ?? null,
+    game: game
+        ? {
+              _id: game._id,
+              title: game.title,
+              releaseDate: game.releaseDate,
+              releaseYear: game.releaseYear,
+              releaseQuarter: game.releaseQuarter,
+              releaseYearMonth: game.releaseYearMonth,
+              releaseText: game.releaseText,
+              coverImageUrl: game.coverImageUrl,
+          }
+        : null,
+})
+
 const matchesLibraryAllFilters = (
     userGame: Doc<'userGames'>,
     filters: {
@@ -330,6 +353,29 @@ const sortBacklogLibraryItems = (
 ) => {
     if (right.interest !== left.interest) {
         return right.interest - left.interest
+    }
+
+    return right.updatedAt - left.updatedAt
+}
+
+const sortActiveRuns = (
+    left: Doc<'gameRuns'> | ReturnType<typeof toActiveRunListItem>,
+    right: Doc<'gameRuns'> | ReturnType<typeof toActiveRunListItem>,
+) => {
+    if (left.startedDate && right.startedDate && left.startedDate !== right.startedDate) {
+        return right.startedDate.localeCompare(left.startedDate)
+    }
+
+    if (left.startedYearMonth && right.startedYearMonth) {
+        if (left.startedYearMonth !== right.startedYearMonth) {
+            return right.startedYearMonth.localeCompare(left.startedYearMonth)
+        }
+    }
+
+    if (left.startedYear !== undefined && right.startedYear !== undefined) {
+        if (left.startedYear !== right.startedYear) {
+            return right.startedYear - left.startedYear
+        }
     }
 
     return right.updatedAt - left.updatedAt
@@ -672,6 +718,98 @@ export const listMyBacklog = query({
             page,
             pageSize,
             hasMore: offset + pageSize < items.length,
+        }
+    },
+})
+
+export const listMyActiveRuns = query({
+    args: {
+        searchText: v.optional(v.string()),
+        page: v.number(),
+        pageSize: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const pageSize = Math.min(Math.max(Math.floor(args.pageSize ?? 25), 1), 50)
+        const page = Math.max(Math.floor(args.page), 1)
+        const offset = (page - 1) * pageSize
+        const searchText = normalizeGameTitle(args.searchText ?? '')
+
+        if (searchText.length >= 2) {
+            const games = await ctx.db
+                .query('games')
+                .withIndex('by_titleNormalized', (q) =>
+                    q
+                        .gte('titleNormalized', searchText)
+                        .lt('titleNormalized', getPrefixEnd(searchText)),
+                )
+                .take(200)
+
+            const joinedRuns = await Promise.all(
+                games.map(async (game) => {
+                    const userGame = await ctx.db
+                        .query('userGames')
+                        .withIndex('by_user_game', (q) =>
+                            q.eq('userId', identity.subject).eq('gameId', game._id),
+                        )
+                        .unique()
+
+                    if (!userGame) {
+                        return []
+                    }
+
+                    const runs = await ctx.db
+                        .query('gameRuns')
+                        .withIndex('by_user_userGame', (q) =>
+                            q
+                                .eq('userId', identity.subject)
+                                .eq('userGameId', userGame._id),
+                        )
+                        .collect()
+
+                    return runs
+                        .filter((run) => run.status === 'playing')
+                        .map((run) => toActiveRunListItem(run, userGame, game))
+                }),
+            )
+
+            const items = joinedRuns.flat().sort(sortActiveRuns)
+
+            return {
+                items: items.slice(offset, offset + pageSize),
+                total: items.length,
+                page,
+                pageSize,
+                hasMore: offset + pageSize < items.length,
+            }
+        }
+
+        const runs = await ctx.db
+            .query('gameRuns')
+            .withIndex('by_user_status', (q) =>
+                q.eq('userId', identity.subject).eq('status', 'playing'),
+            )
+            .collect()
+
+        const sortedRuns = runs.sort(sortActiveRuns)
+        const pageEntries = sortedRuns.slice(offset, offset + pageSize)
+        const items = await Promise.all(
+            pageEntries.map(async (run) => {
+                const [userGame, game] = await Promise.all([
+                    ctx.db.get(run.userGameId),
+                    ctx.db.get(run.gameId),
+                ])
+
+                return toActiveRunListItem(run, userGame, game)
+            }),
+        )
+
+        return {
+            items,
+            total: sortedRuns.length,
+            page,
+            pageSize,
+            hasMore: offset + pageSize < sortedRuns.length,
         }
     },
 })

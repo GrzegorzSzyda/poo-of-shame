@@ -121,6 +121,30 @@ type BacklogResult = {
     hasMore: boolean
 }
 
+type ActiveRunListItem = GameRun & {
+    userGameId: Id<'userGames'>
+    gameId: Id<'games'>
+    userGameStatus: UserGameStatus | null
+    game: {
+        _id: Id<'games'>
+        title: string
+        releaseDate?: string
+        releaseYear?: number
+        releaseQuarter?: number
+        releaseYearMonth?: string
+        releaseText?: string
+        coverImageUrl?: string
+    } | null
+}
+
+type ActiveRunsResult = {
+    items: ActiveRunListItem[]
+    total: number
+    page: number
+    pageSize: number
+    hasMore: boolean
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -134,7 +158,7 @@ const libraryViewTabs: Array<{ value: LibraryView; label: string; disabled?: boo
     [
         { value: 'all', label: 'Wszystkie' },
         { value: 'backlog', label: 'Kupka' },
-        { value: 'active', label: 'Gram teraz', disabled: true },
+        { value: 'active', label: 'Gram teraz' },
         { value: 'history', label: 'Historia', disabled: true },
         { value: 'releases', label: 'Premiery', disabled: true },
     ]
@@ -614,6 +638,143 @@ const BacklogPanel = () => {
             ) : (
                 <div className="px-4 py-5 text-sm text-zinc-400">
                     Brak gier w kupce dla wybranych filtrów.
+                </div>
+            )}
+        </section>
+    )
+}
+
+const ActiveRunsPanel = () => {
+    const [searchText, setSearchText] = useState('')
+    const [page, setPage] = useState(1)
+    const trimmedSearchText = searchText.trim()
+    const searchFilter = trimmedSearchText.length >= 2 ? trimmedSearchText : ''
+    const activeRuns = useQuery(api.library.listMyActiveRuns, {
+        searchText: searchFilter,
+        page,
+        pageSize: 25,
+    }) as ActiveRunsResult | undefined
+
+    return (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+            <div className="border-b border-zinc-800 px-4 py-3">
+                <h2 className="font-medium text-white">Widok: Gram teraz</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                    Aktywne runy oparte bezpośrednio o `gameRuns.status = playing`.
+                </p>
+            </div>
+
+            <div className="border-b border-zinc-800 px-4 py-4">
+                <div className="space-y-1.5">
+                    <label
+                        htmlFor="library-active-search"
+                        className="text-sm text-zinc-300"
+                    >
+                        Tytuł
+                    </label>
+                    <input
+                        id="library-active-search"
+                        value={searchText}
+                        onChange={(event) => {
+                            setSearchText(event.target.value)
+                            setPage(1)
+                        }}
+                        className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                        placeholder="Minimum 2 znaki"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck={false}
+                    />
+                </div>
+
+                {trimmedSearchText.length === 1 ? (
+                    <p className="mt-3 text-xs text-zinc-500">
+                        Wyszukiwanie po tytule startuje od 2 znaków.
+                    </p>
+                ) : null}
+            </div>
+
+            {activeRuns === undefined ? (
+                <div className="px-4 py-5 text-sm text-zinc-400">Ładowanie widoku...</div>
+            ) : activeRuns.items.length > 0 ? (
+                <>
+                    <div className="border-b border-zinc-800 px-4 py-3 text-sm text-zinc-400">
+                        Wyniki: {activeRuns.total}
+                    </div>
+
+                    <ul className="divide-y divide-zinc-800">
+                        {activeRuns.items.map((run) => (
+                            <li key={run._id} className="bg-zinc-900/50 px-4 py-3">
+                                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+                                    <div className="flex min-w-0 gap-3">
+                                        {run.game ? <Cover game={run.game} /> : null}
+                                        <div className="min-w-0 self-center">
+                                            <p className="truncate text-sm font-medium text-zinc-100">
+                                                {run.game?.title ??
+                                                    'Brak rekordu gry w katalogu'}
+                                            </p>
+                                            <p className="mt-1 text-xs text-zinc-400">
+                                                {run.label?.trim() ||
+                                                    runStatusLabels[run.status]}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="self-center text-sm text-zinc-300">
+                                        <p>
+                                            Status gry:{' '}
+                                            {run.userGameStatus
+                                                ? statusLabels[run.userGameStatus]
+                                                : 'brak'}
+                                        </p>
+                                        <p className="mt-1 text-zinc-400">
+                                            Start: {formatRunDate(run, 'started')}
+                                        </p>
+                                    </div>
+
+                                    <div className="self-center text-sm text-zinc-400 md:text-right">
+                                        <p>
+                                            {run.runType
+                                                ? runTypeLabels[run.runType]
+                                                : 'Bez typu'}
+                                        </p>
+                                        {run.rating !== undefined ? (
+                                            <p className="mt-1">Ocena: {run.rating}</p>
+                                        ) : null}
+                                    </div>
+                                </div>
+
+                                {run.note?.trim() ? (
+                                    <p className="mt-3 text-sm text-zinc-400">
+                                        {run.note}
+                                    </p>
+                                ) : null}
+                            </li>
+                        ))}
+                    </ul>
+
+                    <div className="flex items-center justify-between gap-3 border-t border-zinc-800 px-4 py-3">
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={activeRuns.page <= 1}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Poprzednia
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setPage((current) => current + 1)}
+                            disabled={!activeRuns.hasMore}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Następna
+                        </button>
+                    </div>
+                </>
+            ) : (
+                <div className="px-4 py-5 text-sm text-zinc-400">
+                    Nie masz teraz żadnych aktywnych runów.
                 </div>
             )}
         </section>
@@ -1854,6 +2015,7 @@ export const LibraryPage = () => {
 
             {activeView === 'all' ? <LibraryAllPanel /> : null}
             {activeView === 'backlog' ? <BacklogPanel /> : null}
+            {activeView === 'active' ? <ActiveRunsPanel /> : null}
         </div>
     )
 }

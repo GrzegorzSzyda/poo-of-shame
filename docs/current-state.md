@@ -263,8 +263,9 @@ Zasady:
 - aktywny jest tez widok `Kupka` na osobnym query, tylko dla statusow `wanted`
   i `owned`, z filtrowaniem po tytule i statusie oraz sortowaniem
   `interest desc`, potem `updatedAt desc`,
-- kolejne widoki (`Gram Teraz`, `Historia`, `Premiery`) nadal czekaja na
-  implementacje.
+- aktywny jest tez widok `Gram Teraz` na osobnym query po
+  `gameRuns.status = playing`, z wyszukiwaniem po tytule i prosta paginacja,
+- kolejne widoki (`Historia`, `Premiery`) nadal czekaja na implementacje.
 
 ## Lokalna Praca
 

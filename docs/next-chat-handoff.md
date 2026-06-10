@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add backlog tab and dedicated query
+Add active runs tab and dedicated query
 ```
 
 Zawiera:
@@ -73,6 +73,10 @@ Zawiera:
 - `Kupka` pokazuje tylko `wanted` i `owned`,
 - `Kupka` ma filtrowanie po tytule i statusie oraz sortowanie
   `interest desc`, potem `updatedAt desc`.
+- aktywny widok `Gram Teraz`,
+- backendowe query `listMyActiveRuns`,
+- `Gram Teraz` pokazuje runy z `gameRuns.status = playing`,
+- `Gram Teraz` ma wyszukiwanie po tytule i prosta paginacje.
 
 Push wykonany na `origin/rewrite`.
 
@@ -162,7 +166,6 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
 Priorytet implementacji:
 
-- `Gram Teraz` oparty o `gameRuns.status = playing`,
 - `Historia` z wyborem roku,
 - `Premiery`: moje premiery i premiery z katalogu.
 

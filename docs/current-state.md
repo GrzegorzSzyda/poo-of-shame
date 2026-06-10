@@ -265,7 +265,10 @@ Zasady:
   `interest desc`, potem `updatedAt desc`,
 - aktywny jest tez widok `Gram Teraz` na osobnym query po
   `gameRuns.status = playing`, z wyszukiwaniem po tytule i prosta paginacja,
-- kolejne widoki (`Historia`, `Premiery`) nadal czekaja na implementacje.
+- aktywny jest tez widok `Historia` z wyborem roku i sekcjami opartymi o
+  `gameRuns`: rozpoczęte, ukończone, wymaksowane, porzucone oraz bez
+  konkretnego roku,
+- kolejny widok do zrobienia to `Premiery`.
 
 ## Lokalna Praca
 

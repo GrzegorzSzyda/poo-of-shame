@@ -317,6 +317,29 @@ const toActiveRunListItem = (
         : null,
 })
 
+const toHistoryRunListItem = (
+    run: Doc<'gameRuns'>,
+    userGame: Doc<'userGames'> | null,
+    game: Doc<'games'> | null,
+) => ({
+    ...toRunListItem(run),
+    userGameId: run.userGameId,
+    gameId: run.gameId,
+    userGameStatus: userGame?.status ?? null,
+    game: game
+        ? {
+              _id: game._id,
+              title: game.title,
+              releaseDate: game.releaseDate,
+              releaseYear: game.releaseYear,
+              releaseQuarter: game.releaseQuarter,
+              releaseYearMonth: game.releaseYearMonth,
+              releaseText: game.releaseText,
+              coverImageUrl: game.coverImageUrl,
+          }
+        : null,
+})
+
 const matchesLibraryAllFilters = (
     userGame: Doc<'userGames'>,
     filters: {
@@ -380,6 +403,70 @@ const sortActiveRuns = (
 
     return right.updatedAt - left.updatedAt
 }
+
+const sortHistoryRunsByStarted = (
+    left: Doc<'gameRuns'> | ReturnType<typeof toHistoryRunListItem>,
+    right: Doc<'gameRuns'> | ReturnType<typeof toHistoryRunListItem>,
+) => {
+    if (left.startedDate && right.startedDate && left.startedDate !== right.startedDate) {
+        return right.startedDate.localeCompare(left.startedDate)
+    }
+
+    if (left.startedYearMonth && right.startedYearMonth) {
+        if (left.startedYearMonth !== right.startedYearMonth) {
+            return right.startedYearMonth.localeCompare(left.startedYearMonth)
+        }
+    }
+
+    if (left.startedYear !== undefined && right.startedYear !== undefined) {
+        if (left.startedYear !== right.startedYear) {
+            return right.startedYear - left.startedYear
+        }
+    }
+
+    return right.updatedAt - left.updatedAt
+}
+
+const sortHistoryRunsByFinished = (
+    left: Doc<'gameRuns'> | ReturnType<typeof toHistoryRunListItem>,
+    right: Doc<'gameRuns'> | ReturnType<typeof toHistoryRunListItem>,
+) => {
+    if (
+        left.finishedDate &&
+        right.finishedDate &&
+        left.finishedDate !== right.finishedDate
+    ) {
+        return right.finishedDate.localeCompare(left.finishedDate)
+    }
+
+    if (left.finishedYearMonth && right.finishedYearMonth) {
+        if (left.finishedYearMonth !== right.finishedYearMonth) {
+            return right.finishedYearMonth.localeCompare(left.finishedYearMonth)
+        }
+    }
+
+    if (left.finishedYear !== undefined && right.finishedYear !== undefined) {
+        if (left.finishedYear !== right.finishedYear) {
+            return right.finishedYear - left.finishedYear
+        }
+    }
+
+    return right.updatedAt - left.updatedAt
+}
+
+const runMatchesYear = (
+    run: Doc<'gameRuns'>,
+    prefix: 'started' | 'finished',
+    year: number,
+) => {
+    const yearField = run[`${prefix}Year`]
+    const yearMonthField = run[`${prefix}YearMonth`]
+
+    return yearField === year || yearMonthField?.startsWith(`${year}-`) === true
+}
+
+const runHasConcreteYear = (run: Doc<'gameRuns'>, prefix: 'started' | 'finished') =>
+    run[`${prefix}Year`] !== undefined || run[`${prefix}YearMonth`] !== undefined
 
 const findLatestRunForUserGame = async (
     ctx: MutationCtx,
@@ -810,6 +897,99 @@ export const listMyActiveRuns = query({
             page,
             pageSize,
             hasMore: offset + pageSize < sortedRuns.length,
+        }
+    },
+})
+
+export const listMyRunHistoryByYear = query({
+    args: {
+        year: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const runs = await ctx.db
+            .query('gameRuns')
+            .withIndex('by_user', (q) => q.eq('userId', identity.subject))
+            .collect()
+
+        const availableYears = Array.from(
+            new Set(
+                runs.flatMap((run) =>
+                    [run.startedYear, run.finishedYear].filter(
+                        (value): value is number => value !== undefined,
+                    ),
+                ),
+            ),
+        ).sort((left, right) => right - left)
+
+        const selectedYear = args.year ?? availableYears[0] ?? new Date().getUTCFullYear()
+        const yearScopedRuns = runs.filter(
+            (run) =>
+                runMatchesYear(run, 'started', selectedYear) ||
+                runMatchesYear(run, 'finished', selectedYear) ||
+                !runHasConcreteYear(run, 'started') ||
+                ((run.status === 'completed' ||
+                    run.status === 'mastered' ||
+                    run.status === 'dropped') &&
+                    !runHasConcreteYear(run, 'finished')),
+        )
+
+        const enrichedRuns = await Promise.all(
+            yearScopedRuns.map(async (run) => {
+                const [userGame, game] = await Promise.all([
+                    ctx.db.get(run.userGameId),
+                    ctx.db.get(run.gameId),
+                ])
+
+                return toHistoryRunListItem(run, userGame, game)
+            }),
+        )
+
+        const started = enrichedRuns
+            .filter((run) => runMatchesYear(run, 'started', selectedYear))
+            .sort(sortHistoryRunsByStarted)
+        const completed = enrichedRuns
+            .filter(
+                (run) =>
+                    run.status === 'completed' &&
+                    runMatchesYear(run, 'finished', selectedYear),
+            )
+            .sort(sortHistoryRunsByFinished)
+        const mastered = enrichedRuns
+            .filter(
+                (run) =>
+                    run.status === 'mastered' &&
+                    runMatchesYear(run, 'finished', selectedYear),
+            )
+            .sort(sortHistoryRunsByFinished)
+        const dropped = enrichedRuns
+            .filter(
+                (run) =>
+                    run.status === 'dropped' &&
+                    runMatchesYear(run, 'finished', selectedYear),
+            )
+            .sort(sortHistoryRunsByFinished)
+        const withoutConcreteYear = enrichedRuns
+            .filter(
+                (run) =>
+                    !runHasConcreteYear(run, 'started') ||
+                    ((run.status === 'completed' ||
+                        run.status === 'mastered' ||
+                        run.status === 'dropped') &&
+                        !runHasConcreteYear(run, 'finished')),
+            )
+            .sort(sortHistoryRunsByStarted)
+
+        return {
+            selectedYear,
+            availableYears,
+            sections: {
+                started,
+                completed,
+                mastered,
+                dropped,
+                withoutConcreteYear,
+            },
         }
     },
 })

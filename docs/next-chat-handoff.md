@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add active runs tab and dedicated query
+Add yearly run history tab
 ```
 
 Zawiera:
@@ -77,6 +77,10 @@ Zawiera:
 - backendowe query `listMyActiveRuns`,
 - `Gram Teraz` pokazuje runy z `gameRuns.status = playing`,
 - `Gram Teraz` ma wyszukiwanie po tytule i prosta paginacje.
+- aktywny widok `Historia`,
+- backendowe query `listMyRunHistoryByYear`,
+- `Historia` ma wybór roku oraz sekcje: rozpoczęte, ukończone, wymaksowane,
+  porzucone i bez konkretnego roku.
 
 Push wykonany na `origin/rewrite`.
 
@@ -166,7 +170,6 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 
 Priorytet implementacji:
 
-- `Historia` z wyborem roku,
 - `Premiery`: moje premiery i premiery z katalogu.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

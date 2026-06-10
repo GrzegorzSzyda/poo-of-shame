@@ -145,6 +145,34 @@ type ActiveRunsResult = {
     hasMore: boolean
 }
 
+type HistoryRunListItem = GameRun & {
+    userGameId: Id<'userGames'>
+    gameId: Id<'games'>
+    userGameStatus: UserGameStatus | null
+    game: {
+        _id: Id<'games'>
+        title: string
+        releaseDate?: string
+        releaseYear?: number
+        releaseQuarter?: number
+        releaseYearMonth?: string
+        releaseText?: string
+        coverImageUrl?: string
+    } | null
+}
+
+type HistoryResult = {
+    selectedYear: number
+    availableYears: number[]
+    sections: {
+        started: HistoryRunListItem[]
+        completed: HistoryRunListItem[]
+        mastered: HistoryRunListItem[]
+        dropped: HistoryRunListItem[]
+        withoutConcreteYear: HistoryRunListItem[]
+    }
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -159,7 +187,7 @@ const libraryViewTabs: Array<{ value: LibraryView; label: string; disabled?: boo
         { value: 'all', label: 'Wszystkie' },
         { value: 'backlog', label: 'Kupka' },
         { value: 'active', label: 'Gram teraz' },
-        { value: 'history', label: 'Historia', disabled: true },
+        { value: 'history', label: 'Historia' },
         { value: 'releases', label: 'Premiery', disabled: true },
     ]
 
@@ -775,6 +803,154 @@ const ActiveRunsPanel = () => {
             ) : (
                 <div className="px-4 py-5 text-sm text-zinc-400">
                     Nie masz teraz żadnych aktywnych runów.
+                </div>
+            )}
+        </section>
+    )
+}
+
+const HistorySection = ({
+    title,
+    runs,
+    emptyLabel,
+}: {
+    title: string
+    runs: HistoryRunListItem[]
+    emptyLabel: string
+}) => (
+    <section className="rounded-md border border-zinc-800 bg-zinc-950/40">
+        <div className="border-b border-zinc-800 px-4 py-3">
+            <h3 className="text-sm font-medium text-zinc-100">{title}</h3>
+        </div>
+
+        {runs.length > 0 ? (
+            <ul className="divide-y divide-zinc-800">
+                {runs.map((run) => (
+                    <li key={`${title}-${run._id}`} className="px-4 py-3">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+                            <div className="flex min-w-0 gap-3">
+                                {run.game ? <Cover game={run.game} /> : null}
+                                <div className="min-w-0 self-center">
+                                    <p className="truncate text-sm font-medium text-zinc-100">
+                                        {run.game?.title ?? 'Brak rekordu gry w katalogu'}
+                                    </p>
+                                    <p className="mt-1 text-xs text-zinc-400">
+                                        {run.label?.trim() || runStatusLabels[run.status]}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="self-center text-sm text-zinc-300">
+                                <p>
+                                    Status gry:{' '}
+                                    {run.userGameStatus
+                                        ? statusLabels[run.userGameStatus]
+                                        : 'brak'}
+                                </p>
+                                <p className="mt-1 text-zinc-400">
+                                    Start: {formatRunDate(run, 'started')}
+                                </p>
+                                <p className="mt-1 text-zinc-400">
+                                    Koniec: {formatRunDate(run, 'finished')}
+                                </p>
+                            </div>
+
+                            <div className="self-center text-sm text-zinc-400 md:text-right">
+                                <p>
+                                    {run.runType
+                                        ? runTypeLabels[run.runType]
+                                        : 'Bez typu'}
+                                </p>
+                                {run.rating !== undefined ? (
+                                    <p className="mt-1">Ocena: {run.rating}</p>
+                                ) : null}
+                            </div>
+                        </div>
+
+                        {run.note?.trim() ? (
+                            <p className="mt-3 text-sm text-zinc-400">{run.note}</p>
+                        ) : null}
+                    </li>
+                ))}
+            </ul>
+        ) : (
+            <div className="px-4 py-4 text-sm text-zinc-500">{emptyLabel}</div>
+        )}
+    </section>
+)
+
+const HistoryPanel = () => {
+    const currentYear = new Date().getUTCFullYear()
+    const [selectedYear, setSelectedYear] = useState(currentYear)
+    const history = useQuery(api.library.listMyRunHistoryByYear, {
+        year: selectedYear,
+    }) as HistoryResult | undefined
+    const yearOptions =
+        history && history.availableYears.length > 0
+            ? history.availableYears
+            : [currentYear]
+
+    return (
+        <section className="rounded-lg border border-zinc-800 bg-zinc-900/70">
+            <div className="border-b border-zinc-800 px-4 py-3">
+                <h2 className="font-medium text-white">Widok: Historia</h2>
+                <p className="mt-1 text-sm text-zinc-400">
+                    Roczna historia runów zbudowana bezpośrednio z `gameRuns`.
+                </p>
+            </div>
+
+            <div className="border-b border-zinc-800 px-4 py-4">
+                <div className="max-w-xs space-y-1.5">
+                    <label
+                        htmlFor="library-history-year"
+                        className="text-sm text-zinc-300"
+                    >
+                        Rok
+                    </label>
+                    <select
+                        id="library-history-year"
+                        value={selectedYear}
+                        onChange={(event) => setSelectedYear(Number(event.target.value))}
+                        className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                    >
+                        {yearOptions.map((year) => (
+                            <option key={year} value={year}>
+                                {year}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {history === undefined ? (
+                <div className="px-4 py-5 text-sm text-zinc-400">Ładowanie widoku...</div>
+            ) : (
+                <div className="space-y-4 px-4 py-4">
+                    <HistorySection
+                        title={`Grane / rozpoczęte (${history.sections.started.length})`}
+                        runs={history.sections.started}
+                        emptyLabel="Brak runów rozpoczętych w tym roku."
+                    />
+                    <HistorySection
+                        title={`Ukończone (${history.sections.completed.length})`}
+                        runs={history.sections.completed}
+                        emptyLabel="Brak ukończonych runów w tym roku."
+                    />
+                    <HistorySection
+                        title={`Wymaksowane (${history.sections.mastered.length})`}
+                        runs={history.sections.mastered}
+                        emptyLabel="Brak wymaksowanych runów w tym roku."
+                    />
+                    <HistorySection
+                        title={`Porzucone (${history.sections.dropped.length})`}
+                        runs={history.sections.dropped}
+                        emptyLabel="Brak porzuconych runów w tym roku."
+                    />
+                    <HistorySection
+                        title={`Bez konkretnego roku (${history.sections.withoutConcreteYear.length})`}
+                        runs={history.sections.withoutConcreteYear}
+                        emptyLabel="Brak runów bez konkretnego roku."
+                    />
                 </div>
             )}
         </section>
@@ -2016,6 +2192,7 @@ export const LibraryPage = () => {
             {activeView === 'all' ? <LibraryAllPanel /> : null}
             {activeView === 'backlog' ? <BacklogPanel /> : null}
             {activeView === 'active' ? <ActiveRunsPanel /> : null}
+            {activeView === 'history' ? <HistoryPanel /> : null}
         </div>
     )
 }

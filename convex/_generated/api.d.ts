@@ -7,18 +7,24 @@
  * To regenerate, run `npx convex dev`.
  * @module
  */
-import type { ApiFromModules, FilterApi, FunctionReference } from 'convex/server'
-import type * as admin from '../admin.js'
-import type * as games from '../games.js'
-import type * as library from '../library.js'
-import type * as migrations from '../migrations.js'
+
+import type * as admin from "../admin.js";
+import type * as games from "../games.js";
+import type * as library from "../library.js";
+import type * as migrations from "../migrations.js";
+
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-    admin: typeof admin
-    games: typeof games
-    library: typeof library
-    migrations: typeof migrations
-}>
+  admin: typeof admin;
+  games: typeof games;
+  library: typeof library;
+  migrations: typeof migrations;
+}>;
 
 /**
  * A utility for referencing Convex functions in your app's public API.
@@ -28,7 +34,10 @@ declare const fullApi: ApiFromModules<{
  * const myFunctionReference = api.myModule.myFunction;
  * ```
  */
-export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'public'>>
+export declare const api: FilterApi<
+  typeof fullApi,
+  FunctionReference<any, "public">
+>;
 
 /**
  * A utility for referencing Convex functions in your app's internal API.
@@ -39,8 +48,8 @@ export declare const api: FilterApi<typeof fullApi, FunctionReference<any, 'publ
  * ```
  */
 export declare const internal: FilterApi<
-    typeof fullApi,
-    FunctionReference<any, 'internal'>
->
+  typeof fullApi,
+  FunctionReference<any, "internal">
+>;
 
-export declare const components: {}
+export declare const components: {};

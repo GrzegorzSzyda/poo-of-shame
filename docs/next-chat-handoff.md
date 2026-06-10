@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add basic user library flow
+Start soft status-to-run flow
 ```
 
 Zawiera:
@@ -42,6 +42,13 @@ Zawiera:
 - inline panel runow pod wpisem `/library`,
 - tworzenie runu z uproszczonymi datami `unknown`/`exact`,
 - `createGameRun` aktualizuje `lastRunId`, a pierwszy run ustawia `pinnedRunId`,
+- edycje i usuwanie runow inline,
+- opcjonalny rating i notatke per run,
+- backendowa walidacje ratingu `0..100`,
+- czyszczenie dat runu przy zmianie precyzji na `unknown`,
+- przestawianie albo czyszczenie `lastRunId`/`pinnedRunId` po usunieciu runu,
+- miekka sugestie po zmianie statusu gry na `playing`, `completed`, `mastered`
+  albo `dropped`; status gry nie zmienia runow automatycznie,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -69,6 +76,8 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `priority` zostalo odrzucone.
 - Ocena jest per run.
 - Wyswietlany run: `pinnedRunId`, a jesli go nie ma, `lastRunId`.
+- Zmiana statusu gry nie powinna ukrycie modyfikowac historii runow; UI ma
+  sugerowac jawna akcje na runie.
 - Nie robimy teraz sledzenia czasu gry.
 
 ## Wazne Decyzje Techniczne
@@ -128,11 +137,12 @@ PORT=3002 bun run dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to rozbudowa runow:
+Najlepszy kolejny krok to domkniecie flow statusow i runow:
 
-- edycja i usuwanie runow,
-- rating dla runow,
-- decyzja, kiedy zmiana statusu gry aktualizuje albo sugeruje aktualizacje runu.
+- szybkie akcje z sugestii, np. "utworz run w trakcie" albo "oznacz ostatni run
+  jako ukonczony",
+- pelniejsze precyzje dat dla runow (`year`, `quarter`, `month`, `text`),
+- lepszy wybor, ktory run jest `pinnedRunId`.
 
 Nie migrowac jeszcze `libraryEntries`, dopoki nowe widoki nie sa wygodne do
 codziennego uzywania.

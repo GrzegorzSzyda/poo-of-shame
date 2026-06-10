@@ -40,6 +40,9 @@ type UserGameStatus =
     | 'mastered'
     | 'dropped'
 
+type GameRunStatus = 'planned' | 'playing' | 'completed' | 'mastered' | 'dropped'
+type RunDatePrecision = 'exact' | 'unknown'
+
 const interestStatuses = new Set<UserGameStatus>(['wanted', 'owned', 'playing'])
 
 const ensureAuthenticated = async (ctx: QueryCtx | MutationCtx) => {
@@ -65,6 +68,13 @@ const assertInterest = (interest: number) => {
     return Math.round(interest)
 }
 
+const assertRating = (rating: number) => {
+    if (!Number.isFinite(rating) || rating < 0 || rating > 100) {
+        throw new ConvexError('RATING_INVALID')
+    }
+    return Math.round(rating)
+}
+
 const isValidIsoDate = (value: string) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
     const parsed = new Date(`${value}T00:00:00.000Z`)
@@ -75,12 +85,18 @@ const toYearMonth = (date: string) => date.slice(0, 7)
 
 const buildRunDateFields = (
     prefix: 'started' | 'finished',
-    precision: 'exact' | 'unknown',
+    precision: RunDatePrecision,
     date?: string,
 ) => {
     if (precision === 'unknown') {
         return {
             [`${prefix}Precision`]: precision,
+            [`${prefix}Date`]: undefined,
+            [`${prefix}Year`]: undefined,
+            [`${prefix}Quarter`]: undefined,
+            [`${prefix}Month`]: undefined,
+            [`${prefix}Text`]: undefined,
+            [`${prefix}YearMonth`]: undefined,
         }
     }
 
@@ -126,12 +142,81 @@ const toRunListItem = (run: Doc<'gameRuns'>) => ({
     status: run.status,
     label: run.label,
     runType: run.runType,
+    rating: run.rating,
+    note: run.note,
     startedPrecision: run.startedPrecision,
     startedDate: run.startedDate,
     finishedPrecision: run.finishedPrecision,
     finishedDate: run.finishedDate,
     createdAt: run.createdAt,
+    updatedAt: run.updatedAt,
 })
+
+const findLatestRunForUserGame = async (
+    ctx: MutationCtx,
+    userId: string,
+    userGameId: Doc<'userGames'>['_id'],
+    excludedRunId?: Doc<'gameRuns'>['_id'],
+) => {
+    const runs = await ctx.db
+        .query('gameRuns')
+        .withIndex('by_user_userGame', (q) =>
+            q.eq('userId', userId).eq('userGameId', userGameId),
+        )
+        .order('desc')
+        .take(2)
+
+    return runs.find((run) => run._id !== excludedRunId) ?? null
+}
+
+const getOwnedRun = async (
+    ctx: MutationCtx,
+    userId: string,
+    runId: Doc<'gameRuns'>['_id'],
+) => {
+    const run = await ctx.db.get(runId)
+
+    if (!run) {
+        throw new ConvexError('GAME_RUN_NOT_FOUND')
+    }
+
+    if (run.userId !== userId) {
+        throw new ConvexError('FORBIDDEN')
+    }
+
+    return run
+}
+
+const assertRunBelongsToUserGame = (run: Doc<'gameRuns'>, userGame: Doc<'userGames'>) => {
+    if (run.userGameId !== userGame._id || run.gameId !== userGame.gameId) {
+        throw new ConvexError('GAME_RUN_MISMATCH')
+    }
+}
+
+const buildRunPatch = (args: {
+    status: GameRunStatus
+    label?: string
+    runType?: Doc<'gameRuns'>['runType']
+    rating?: number
+    note?: string
+    startedPrecision: RunDatePrecision
+    startedDate?: string
+    finishedPrecision: RunDatePrecision
+    finishedDate?: string
+}) => {
+    const label = args.label?.trim()
+    const note = args.note?.trim()
+
+    return {
+        status: args.status,
+        label: label && label.length > 0 ? label : undefined,
+        runType: args.runType,
+        rating: args.rating === undefined ? undefined : assertRating(args.rating),
+        note: note && note.length > 0 ? note : undefined,
+        ...buildRunDateFields('started', args.startedPrecision, args.startedDate),
+        ...buildRunDateFields('finished', args.finishedPrecision, args.finishedDate),
+    }
+}
 
 export const searchCatalogForLibrary = query({
     args: {
@@ -344,6 +429,8 @@ export const createGameRun = mutation({
         status: gameRunStatusValidator,
         label: v.optional(v.string()),
         runType: v.optional(gameRunTypeValidator),
+        rating: v.optional(v.number()),
+        note: v.optional(v.string()),
         startedPrecision: runDatePrecisionValidator,
         startedDate: v.optional(v.string()),
         finishedPrecision: runDatePrecisionValidator,
@@ -361,17 +448,12 @@ export const createGameRun = mutation({
             throw new ConvexError('FORBIDDEN')
         }
 
-        const label = args.label?.trim()
         const now = Date.now()
         const runId = await ctx.db.insert('gameRuns', {
             userId: identity.subject,
             userGameId: args.userGameId,
             gameId: userGame.gameId,
-            status: args.status,
-            label: label && label.length > 0 ? label : undefined,
-            runType: args.runType,
-            ...buildRunDateFields('started', args.startedPrecision, args.startedDate),
-            ...buildRunDateFields('finished', args.finishedPrecision, args.finishedDate),
+            ...buildRunPatch(args),
             createdAt: now,
             updatedAt: now,
         })
@@ -383,5 +465,91 @@ export const createGameRun = mutation({
         })
 
         return runId
+    },
+})
+
+export const updateGameRun = mutation({
+    args: {
+        runId: v.id('gameRuns'),
+        status: gameRunStatusValidator,
+        label: v.optional(v.string()),
+        runType: v.optional(gameRunTypeValidator),
+        rating: v.optional(v.number()),
+        note: v.optional(v.string()),
+        startedPrecision: runDatePrecisionValidator,
+        startedDate: v.optional(v.string()),
+        finishedPrecision: runDatePrecisionValidator,
+        finishedDate: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const run = await getOwnedRun(ctx, identity.subject, args.runId)
+        const userGame = await ctx.db.get(run.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        assertRunBelongsToUserGame(run, userGame)
+
+        const now = Date.now()
+        await ctx.db.patch(args.runId, {
+            ...buildRunPatch(args),
+            updatedAt: now,
+        })
+
+        if (userGame.lastRunId === args.runId) {
+            await ctx.db.patch(userGame._id, {
+                updatedAt: now,
+            })
+        }
+    },
+})
+
+export const deleteGameRun = mutation({
+    args: {
+        runId: v.id('gameRuns'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const run = await getOwnedRun(ctx, identity.subject, args.runId)
+        const userGame = await ctx.db.get(run.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        assertRunBelongsToUserGame(run, userGame)
+
+        await ctx.db.delete(args.runId)
+
+        if (userGame.lastRunId === args.runId || userGame.pinnedRunId === args.runId) {
+            const replacementRun = await findLatestRunForUserGame(
+                ctx,
+                identity.subject,
+                userGame._id,
+                args.runId,
+            )
+
+            await ctx.db.patch(userGame._id, {
+                lastRunId:
+                    userGame.lastRunId === args.runId
+                        ? (replacementRun?._id ?? undefined)
+                        : userGame.lastRunId,
+                pinnedRunId:
+                    userGame.pinnedRunId === args.runId
+                        ? (replacementRun?._id ?? undefined)
+                        : userGame.pinnedRunId,
+                updatedAt: Date.now(),
+            })
+        }
     },
 })

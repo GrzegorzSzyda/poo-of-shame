@@ -1,6 +1,6 @@
 # Aktualny Stan Projektu
 
-Ostatnia aktualizacja: 2026-06-01.
+Ostatnia aktualizacja: 2026-06-10.
 
 ## Cel Rewrite
 
@@ -200,6 +200,8 @@ Backend:
 - `removeGameFromLibrary`
 - `listRunsForUserGame`
 - `createGameRun`
+- `updateGameRun`
+- `deleteGameRun`
 
 Zasady:
 
@@ -215,8 +217,16 @@ Zasady:
 - runy sa pokazywane inline pod wpisem biblioteki,
 - dodanie runu aktualizuje `lastRunId`, a pierwszy run ustawia tez
   `pinnedRunId`,
-- formularz runu obsluguje status, opcjonalny typ, opcjonalny label oraz daty
-  startu/konca tylko jako `unknown` albo `exact`,
+- formularz runu obsluguje status, opcjonalny typ, opcjonalny label, opcjonalna
+  ocene, opcjonalna notatke oraz daty startu/konca tylko jako `unknown` albo
+  `exact`,
+- istniejace runy mozna edytowac inline,
+- istniejace runy mozna usuwac z potwierdzeniem; jesli usuwany run byl
+  `lastRunId` albo `pinnedRunId`, backend przestawia wskazanie na najnowszy
+  pozostaly run albo czysci wskazanie,
+- zmiana statusu gry nie aktualizuje runow automatycznie; UI pokazuje miekka
+  sugestie przejscia do runow dla statusow `playing`, `completed`, `mastered` i
+  `dropped`,
 - ten slice nie tworzy jeszcze `gameAccess`.
 
 ## Lokalna Praca

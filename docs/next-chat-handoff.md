@@ -53,6 +53,8 @@ Zawiera:
 - szybkie akcje w sugestii: oznaczenie ostatniego runu odpowiednim statusem albo
   utworzenie nowego runu z tym statusem,
 - pelniejsze precyzje dat runow w formularzu tworzenia i edycji,
+- panel `/admin/migration` z podgladem i partiowa migracja `libraryEntries` do
+  `userGames`, `gameRuns` i `gameAccess`,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -105,8 +107,10 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `src/features/admin/releaseForm.ts` - mapping formularza premiery.
 - `src/features/admin/UserRolesPanel.tsx` - role.
 - `src/features/admin/IgdbSettingsForm.tsx` - IGDB.
+- `src/features/admin/LibraryMigrationPanel.tsx` - migracja legacy biblioteki.
 - `src/pages/LibraryPage.tsx` - podstawowa kupka uzytkownika.
 - `convex/library.ts` - query/mutacje dla `userGames`.
+- `convex/migrations.ts` - admin-only migracja `libraryEntries`.
 - `docs/current-state.md` - aktualna dokumentacja techniczna.
 - `docs/product-v1.md` - kierunek produktu.
 
@@ -141,9 +145,9 @@ PORT=3002 bun run dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Najlepszy kolejny krok to domkniecie wyboru glownego runu:
+Najlepszy kolejny krok to uruchomic migracje z `/admin/migration` partiami,
+sprawdzic wyniki w `/library`, a potem domknac wybor glownego runu:
 
 - lepszy wybor, ktory run jest `pinnedRunId`.
 
-Nie migrowac jeszcze `libraryEntries`, dopoki nowe widoki nie sa wygodne do
-codziennego uzywania.
+Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

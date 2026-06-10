@@ -45,6 +45,8 @@ Nowe tabele rewrite:
 - `integrationSettings`
 
 `libraryEntries` zostaje do czasu zaplanowanej i zweryfikowanej migracji.
+Migracja jest przygotowana addytywnie i oznacza stare wpisy jako zmigrowane,
+ale ich nie usuwa.
 
 ## Model Domenowy
 
@@ -131,6 +133,7 @@ Aktualne glowne route'y:
 - `/admin/games` - zarzadzanie katalogiem gier,
 - `/admin/users` - zarzadzanie rolami,
 - `/admin/integrations` - konfiguracja integracji.
+- `/admin/migration` - migracja `libraryEntries` do nowego modelu.
 
 Panel admina jest chroniony zarowno na froncie, jak i w kazdej mutacji/query
 backendowej.
@@ -184,6 +187,24 @@ Pliki:
 
 Panel pozwala zapisac `igdbClientId` i `igdbClientSecret` w Convexie.
 
+### Admin: migracja biblioteki
+
+Pliki:
+
+- `src/features/admin/LibraryMigrationPanel.tsx`
+- `convex/migrations.ts`
+
+Panel pokazuje podglad migracji `libraryEntries` i pozwala uruchomic migracje
+partiami. Migracja:
+
+- tworzy brakujace `userGames`,
+- tworzy `gameRuns` dla starych statusow `playing`, `completed`, `done` i
+  `dropped`,
+- przenosi ocene na run tylko dla statusow `completed`, `done` i `dropped`,
+- mapuje stare platformy na `gameAccess`,
+- oznacza stare wpisy polami `migratedToUserGameId` i `migratedAt`,
+- nie usuwa `libraryEntries`.
+
 ### Biblioteka uzytkownika
 
 Pliki:
@@ -230,7 +251,8 @@ Zasady:
   `dropped`,
 - sugestia pozwala jawnie oznaczyc ostatni run odpowiednim statusem albo
   utworzyc nowy run z tym statusem,
-- ten slice nie tworzy jeszcze `gameAccess`.
+- reczne dodawanie w tym slice nie tworzy jeszcze `gameAccess`, ale migracja
+  legacy potrafi utworzyc `gameAccess` na podstawie starych platform.
 
 ## Lokalna Praca
 
@@ -263,9 +285,8 @@ PORT=3002 bun run dev
 
 ## Najblizsze Sensowne Kroki
 
-1. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
+1. Uruchomic migracje z `/admin/migration` partiami i sprawdzic wyniki w
+   `/library`.
+2. Dodac wybor glownego runu, czyli kontrolowane ustawianie `pinnedRunId`.
+3. Dodac wyszukiwanie/filtrowanie katalogu w adminie, bo lista ostatnich 50 gier
    szybko przestanie wystarczac.
-2. Dodac edycje i usuwanie runow.
-3. Ustalic automatyke miedzy statusami `userGames` i `gameRuns`.
-4. Zaplanowac migracje `libraryEntries` do nowego modelu, ale dopiero gdy nowe
-   widoki beda gotowe.

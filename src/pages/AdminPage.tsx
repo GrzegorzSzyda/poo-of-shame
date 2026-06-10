@@ -2,6 +2,7 @@ import { useQuery } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import { GamesAdminPanel } from '../features/admin/GamesAdminPanel'
 import { IgdbSettingsForm } from '../features/admin/IgdbSettingsForm'
+import { LibraryMigrationPanel } from '../features/admin/LibraryMigrationPanel'
 import { UserRolesPanel } from '../features/admin/UserRolesPanel'
 import { type AdminRoute, navigate } from '../routing'
 
@@ -9,6 +10,7 @@ const adminTabs: Array<{ route: AdminRoute; label: string; href: string }> = [
     { route: 'games', label: 'Gry', href: '/admin/games' },
     { route: 'users', label: 'Role', href: '/admin/users' },
     { route: 'integrations', label: 'Integracje', href: '/admin/integrations' },
+    { route: 'migration', label: 'Migracja', href: '/admin/migration' },
 ]
 
 const AdminTab = ({
@@ -81,6 +83,7 @@ export const AdminPage = ({ route }: { route: AdminRoute }) => {
             {route === 'games' ? <GamesAdminPanel igdb={panel?.igdb} /> : null}
             {route === 'users' ? <UserRolesPanel users={panel?.users} /> : null}
             {route === 'integrations' ? <IgdbSettingsForm igdb={panel?.igdb} /> : null}
+            {route === 'migration' ? <LibraryMigrationPanel /> : null}
         </section>
     )
 }

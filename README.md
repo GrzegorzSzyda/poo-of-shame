@@ -18,7 +18,8 @@ referencje, ale nowa implementacja powstaje od zera na branchu `rewrite`.
 - Panel admina ma osobne widoki:
     - `/admin/games` - dodawanie, podglad, edycja i usuwanie gier z katalogu,
     - `/admin/users` - nadawanie rol,
-    - `/admin/integrations` - konfiguracja IGDB.
+    - `/admin/integrations` - konfiguracja IGDB,
+    - `/admin/migration` - migracja starej biblioteki do modelu rewrite.
 
 ## Dokumentacja
 

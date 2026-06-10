@@ -130,6 +130,8 @@ export default defineSchema({
         rating: v.number(),
         wantsToPlay: v.number(),
         progressStatus: progressStatusValidator,
+        migratedToUserGameId: v.optional(v.id('userGames')),
+        migratedAt: v.optional(v.number()),
         createdAt: v.number(),
         updatedAt: v.number(),
     })

@@ -1,4 +1,4 @@
-export type AdminRoute = 'games' | 'users' | 'integrations'
+export type AdminRoute = 'games' | 'users' | 'integrations' | 'migration'
 
 export type AppRoute =
     | { section: 'home' }
@@ -14,6 +14,10 @@ export const getRoute = (): AppRoute => {
 
     if (path === '/admin/integrations') {
         return { section: 'admin', adminRoute: 'integrations' }
+    }
+
+    if (path === '/admin/migration') {
+        return { section: 'admin', adminRoute: 'migration' }
     }
 
     if (path === '/admin' || path === '/admin/games') {

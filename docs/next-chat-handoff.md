@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add releases tab with my and catalog variants
+Add manual game access panel in library
 ```
 
 Zawiera:
@@ -85,6 +85,11 @@ Zawiera:
 - backendowe query `listMyReleaseCalendar` i `listCatalogReleaseCalendar`,
 - `Premiery` ma dwa warianty: `Moje premiery` i `Katalog`,
 - oba warianty maja filtrowanie po tytule, roku albo `brak roku`.
+- reczny panel `Dostęp` pod wpisem gry w `/library`,
+- backendowe query/mutacje:
+  `listAccessForUserGame`, `createGameAccess`, `updateGameAccess`,
+  `deleteGameAccess`,
+- panel pozwala zapisywac platforme, zrodlo, typ dostepu, dostepnosc i notatke.
 
 Push wykonany na `origin/rewrite`.
 
@@ -175,6 +180,7 @@ zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
 Priorytet implementacji:
 
 - dopracowanie szczegolow UX widokow biblioteki,
+- przemyslenie UX i filtrów wokol `gameAccess`,
 - ewentualne dodatkowe filtry i lepsze sortowanie widokow premier.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

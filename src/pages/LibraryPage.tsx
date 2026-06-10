@@ -24,6 +24,24 @@ type GameRunType =
     | 'other'
 
 type RunDatePrecision = 'exact' | 'year' | 'quarter' | 'month' | 'text' | 'unknown'
+type AccessPlatform = 'pc' | 'playstation' | 'xbox' | 'switch' | 'mobile' | 'other'
+type AccessSource =
+    | 'steam'
+    | 'gog'
+    | 'epic'
+    | 'ea_app'
+    | 'ubisoft_connect'
+    | 'amazon_gaming'
+    | 'ps_store'
+    | 'ps_plus'
+    | 'ps_disc'
+    | 'xbox_store'
+    | 'game_pass'
+    | 'switch_eshop'
+    | 'switch_card'
+    | 'pc_disc'
+    | 'other'
+type AccessType = 'owned' | 'subscription' | 'borrowed' | 'wishlist' | 'unknown'
 type LibraryView = 'all' | 'backlog' | 'active' | 'history' | 'releases'
 type LibraryRunFilter = 'all' | 'with_run' | 'without_run'
 type LibraryStatusFilter = 'all' | UserGameStatus
@@ -200,6 +218,15 @@ type ReleaseCalendarResult = {
     availableYears: number[]
 }
 
+type GameAccess = {
+    _id: Id<'gameAccess'>
+    platform: AccessPlatform
+    source: AccessSource
+    accessType: AccessType
+    isAvailable: boolean
+    note?: string
+}
+
 const statusOptions: Array<{ value: UserGameStatus; label: string }> = [
     { value: 'wanted', label: 'Chcę zagrać' },
     { value: 'owned', label: 'Mam' },
@@ -240,6 +267,41 @@ const backlogStatusOptions: Array<{ value: BacklogStatusFilter; label: string }>
     { value: 'owned', label: 'Tylko owned' },
 ]
 
+const accessPlatformOptions: Array<{ value: AccessPlatform; label: string }> = [
+    { value: 'pc', label: 'PC' },
+    { value: 'playstation', label: 'PlayStation' },
+    { value: 'xbox', label: 'Xbox' },
+    { value: 'switch', label: 'Switch' },
+    { value: 'mobile', label: 'Mobile' },
+    { value: 'other', label: 'Inne' },
+]
+
+const accessSourceOptions: Array<{ value: AccessSource; label: string }> = [
+    { value: 'steam', label: 'Steam' },
+    { value: 'gog', label: 'GOG' },
+    { value: 'epic', label: 'Epic' },
+    { value: 'ea_app', label: 'EA app' },
+    { value: 'ubisoft_connect', label: 'Ubisoft Connect' },
+    { value: 'amazon_gaming', label: 'Amazon Gaming' },
+    { value: 'ps_store', label: 'PS Store' },
+    { value: 'ps_plus', label: 'PS Plus' },
+    { value: 'ps_disc', label: 'Płyta PS' },
+    { value: 'xbox_store', label: 'Xbox Store' },
+    { value: 'game_pass', label: 'Game Pass' },
+    { value: 'switch_eshop', label: 'Switch eShop' },
+    { value: 'switch_card', label: 'Karta Switch' },
+    { value: 'pc_disc', label: 'PC disc' },
+    { value: 'other', label: 'Inne' },
+]
+
+const accessTypeOptions: Array<{ value: AccessType; label: string }> = [
+    { value: 'owned', label: 'Posiadam' },
+    { value: 'subscription', label: 'Subskrypcja' },
+    { value: 'borrowed', label: 'Pożyczone' },
+    { value: 'wishlist', label: 'Wishlist' },
+    { value: 'unknown', label: 'Nieznane' },
+]
+
 const statusLabels = Object.fromEntries(
     statusOptions.map((option) => [option.value, option.label]),
 ) as Record<UserGameStatus, string>
@@ -269,6 +331,18 @@ const runStatusLabels = Object.fromEntries(
 const runTypeLabels = Object.fromEntries(
     runTypeOptions.map((option) => [option.value, option.label]),
 ) as Record<GameRunType, string>
+
+const accessPlatformLabels = Object.fromEntries(
+    accessPlatformOptions.map((option) => [option.value, option.label]),
+) as Record<AccessPlatform, string>
+
+const accessSourceLabels = Object.fromEntries(
+    accessSourceOptions.map((option) => [option.value, option.label]),
+) as Record<AccessSource, string>
+
+const accessTypeLabels = Object.fromEntries(
+    accessTypeOptions.map((option) => [option.value, option.label]),
+) as Record<AccessType, string>
 
 const runDatePrecisionOptions: Array<{ value: RunDatePrecision; label: string }> = [
     { value: 'unknown', label: 'Brak daty' },
@@ -317,6 +391,14 @@ const getLibraryErrorMessage = (error: unknown, fallback: string) => {
 
     if (message.includes('USER_GAME_IN_USE')) {
         return 'Nie można usunąć gry, bo ma już powiązane runy albo dostęp.'
+    }
+
+    if (message.includes('GAME_ACCESS_ALREADY_EXISTS')) {
+        return 'Taki dostęp do gry już istnieje.'
+    }
+
+    if (message.includes('GAME_ACCESS_NOT_FOUND')) {
+        return 'Nie znaleziono tego dostępu do gry.'
     }
 
     if (message.includes('FORBIDDEN')) {
@@ -1878,12 +1960,421 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
     )
 }
 
+const AccessListItem = ({ access }: { access: GameAccess }) => {
+    const updateGameAccess = useMutation(api.library.updateGameAccess)
+    const deleteGameAccess = useMutation(api.library.deleteGameAccess)
+    const [isEditing, setIsEditing] = useState(false)
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+    const [platform, setPlatform] = useState<AccessPlatform>(access.platform)
+    const [source, setSource] = useState<AccessSource>(access.source)
+    const [accessType, setAccessType] = useState<AccessType>(access.accessType)
+    const [isAvailable, setIsAvailable] = useState(access.isAvailable)
+    const [note, setNote] = useState(access.note ?? '')
+    const [error, setError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const resetForm = () => {
+        setPlatform(access.platform)
+        setSource(access.source)
+        setAccessType(access.accessType)
+        setIsAvailable(access.isAvailable)
+        setNote(access.note ?? '')
+        setError(null)
+    }
+
+    const handleSubmit = async (event: FormEvent) => {
+        event.preventDefault()
+        setError(null)
+        setIsSubmitting(true)
+
+        try {
+            await updateGameAccess({
+                accessId: access._id,
+                platform,
+                source,
+                accessType,
+                isAvailable,
+                note: note.trim().length > 0 ? note.trim() : undefined,
+            })
+            setIsEditing(false)
+            setIsConfirmingDelete(false)
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się zapisać dostępu.'))
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        setError(null)
+        setIsDeleting(true)
+
+        try {
+            await deleteGameAccess({ accessId: access._id })
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się usunąć dostępu.'))
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    return (
+        <li className="rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
+            <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_9rem_9rem_auto]">
+                <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-zinc-100">
+                        {accessSourceLabels[access.source]}
+                    </p>
+                    <p className="mt-1 text-xs text-zinc-500">
+                        {accessPlatformLabels[access.platform]} ·{' '}
+                        {accessTypeLabels[access.accessType]}
+                    </p>
+                    {access.note ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-zinc-400">
+                            {access.note}
+                        </p>
+                    ) : null}
+                </div>
+                <p className="text-sm text-zinc-400">
+                    {access.isAvailable ? 'Dostępny' : 'Niedostępny'}
+                </p>
+                <p className="text-sm text-zinc-400">
+                    {accessTypeLabels[access.accessType]}
+                </p>
+                <div className="flex flex-wrap gap-2 md:justify-end">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (isEditing) resetForm()
+                            setIsEditing((current) => !current)
+                            setIsConfirmingDelete(false)
+                        }}
+                        className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
+                    >
+                        {isEditing ? 'Zamknij' : 'Edytuj'}
+                    </button>
+                    {isConfirmingDelete ? (
+                        <button
+                            type="button"
+                            onClick={() => void handleDelete()}
+                            disabled={isDeleting}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-red-500 px-2.5 text-xs font-semibold text-red-50 transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isDeleting ? 'Usuwanie...' : 'Potwierdź'}
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsConfirmingDelete(true)
+                                setIsEditing(false)
+                                setError(null)
+                            }}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-red-950/60 px-2.5 text-xs font-medium text-red-200 transition hover:bg-red-900"
+                        >
+                            Usuń
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {error && !isEditing ? (
+                <p className="mt-2 text-sm text-red-300">{error}</p>
+            ) : null}
+
+            {isEditing ? (
+                <form
+                    onSubmit={(event) => void handleSubmit(event)}
+                    className="mt-3 space-y-3 rounded-md border border-zinc-800 bg-zinc-950/70 p-3"
+                >
+                    <div className="grid gap-3 md:grid-cols-3">
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-zinc-300">Platforma</label>
+                            <select
+                                value={platform}
+                                onChange={(event) =>
+                                    setPlatform(event.target.value as AccessPlatform)
+                                }
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                            >
+                                {accessPlatformOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-zinc-300">Źródło</label>
+                            <select
+                                value={source}
+                                onChange={(event) =>
+                                    setSource(event.target.value as AccessSource)
+                                }
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                            >
+                                {accessSourceOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-zinc-300">Typ dostępu</label>
+                            <select
+                                value={accessType}
+                                onChange={(event) =>
+                                    setAccessType(event.target.value as AccessType)
+                                }
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                            >
+                                {accessTypeOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-sm text-zinc-300">
+                        <input
+                            type="checkbox"
+                            checked={isAvailable}
+                            onChange={(event) => setIsAvailable(event.target.checked)}
+                            className="accent-teal-300"
+                        />
+                        Dostęp aktualnie aktywny
+                    </label>
+
+                    <div className="space-y-1.5">
+                        <label className="text-sm text-zinc-300">Notatka</label>
+                        <textarea
+                            value={note}
+                            onChange={(event) => setNote(event.target.value)}
+                            className="min-h-20 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                            placeholder="Opcjonalna notatka o dostępie"
+                        />
+                    </div>
+
+                    {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                resetForm()
+                                setIsEditing(false)
+                            }}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
+                        >
+                            Anuluj
+                        </button>
+                    </div>
+                </form>
+            ) : null}
+        </li>
+    )
+}
+
+const AccessPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
+    const createGameAccess = useMutation(api.library.createGameAccess)
+    const accessRecords = useQuery(api.library.listAccessForUserGame, {
+        userGameId,
+    }) as GameAccess[] | undefined
+    const [platform, setPlatform] = useState<AccessPlatform>('pc')
+    const [source, setSource] = useState<AccessSource>('steam')
+    const [accessType, setAccessType] = useState<AccessType>('owned')
+    const [isAvailable, setIsAvailable] = useState(true)
+    const [note, setNote] = useState('')
+    const [message, setMessage] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const handleSubmit = async (event: FormEvent) => {
+        event.preventDefault()
+        setMessage(null)
+        setError(null)
+        setIsSubmitting(true)
+
+        try {
+            await createGameAccess({
+                userGameId,
+                platform,
+                source,
+                accessType,
+                isAvailable,
+                note: note.trim().length > 0 ? note.trim() : undefined,
+            })
+            setPlatform('pc')
+            setSource('steam')
+            setAccessType('owned')
+            setIsAvailable(true)
+            setNote('')
+            setMessage('Dodano dostęp do gry.')
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się dodać dostępu.'))
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    return (
+        <section className="mt-3 space-y-4 rounded-md border border-zinc-800 bg-zinc-950/60 p-3">
+            <div>
+                <h3 className="text-sm font-medium text-zinc-100">Dostęp</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                    Skąd masz tę grę albo przez co masz do niej dojście.
+                </p>
+            </div>
+
+            {accessRecords === undefined ? (
+                <p className="text-sm text-zinc-400">Ładowanie dostępu...</p>
+            ) : accessRecords.length > 0 ? (
+                <ul className="space-y-2">
+                    {accessRecords.map((access) => (
+                        <AccessListItem key={access._id} access={access} />
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-zinc-400">Brak zapisanych źródeł dostępu.</p>
+            )}
+
+            <form onSubmit={(event) => void handleSubmit(event)} className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`access-platform-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Platforma
+                        </label>
+                        <select
+                            id={`access-platform-${userGameId}`}
+                            value={platform}
+                            onChange={(event) =>
+                                setPlatform(event.target.value as AccessPlatform)
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {accessPlatformOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`access-source-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Źródło
+                        </label>
+                        <select
+                            id={`access-source-${userGameId}`}
+                            value={source}
+                            onChange={(event) =>
+                                setSource(event.target.value as AccessSource)
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {accessSourceOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor={`access-type-${userGameId}`}
+                            className="text-sm text-zinc-300"
+                        >
+                            Typ dostępu
+                        </label>
+                        <select
+                            id={`access-type-${userGameId}`}
+                            value={accessType}
+                            onChange={(event) =>
+                                setAccessType(event.target.value as AccessType)
+                            }
+                            className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                        >
+                            {accessTypeOptions.map((option) => (
+                                <option key={option.value} value={option.value}>
+                                    {option.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <label
+                    htmlFor={`access-available-${userGameId}`}
+                    className="flex items-center gap-2 text-sm text-zinc-300"
+                >
+                    <input
+                        id={`access-available-${userGameId}`}
+                        type="checkbox"
+                        checked={isAvailable}
+                        onChange={(event) => setIsAvailable(event.target.checked)}
+                        className="accent-teal-300"
+                    />
+                    Dostęp aktualnie aktywny
+                </label>
+
+                <div className="space-y-1.5">
+                    <label
+                        htmlFor={`access-note-${userGameId}`}
+                        className="text-sm text-zinc-300"
+                    >
+                        Notatka
+                    </label>
+                    <textarea
+                        id={`access-note-${userGameId}`}
+                        value={note}
+                        onChange={(event) => setNote(event.target.value)}
+                        className="min-h-20 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                        placeholder="Opcjonalna notatka o źródle dostępu"
+                    />
+                </div>
+
+                {message ? <p className="text-sm text-teal-200">{message}</p> : null}
+                {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+                <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-teal-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {isSubmitting ? 'Dodawanie...' : 'Dodaj dostęp'}
+                </button>
+            </form>
+        </section>
+    )
+}
+
 const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
     const updateLibraryGame = useMutation(api.library.updateLibraryGame)
     const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
     const applyRunSuggestion = useMutation(api.library.applyRunSuggestion)
     const [isEditing, setIsEditing] = useState(false)
     const [isShowingRuns, setIsShowingRuns] = useState(false)
+    const [isShowingAccess, setIsShowingAccess] = useState(false)
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
     const [status, setStatus] = useState<UserGameStatus>(entry.status)
     const [interest, setInterest] = useState(entry.interest)
@@ -2028,6 +2519,13 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                         className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 md:mt-0 md:ml-2"
                     >
                         {isShowingRuns ? 'Ukryj runy' : 'Runy'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setIsShowingAccess((current) => !current)}
+                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 md:mt-0 md:ml-2"
+                    >
+                        {isShowingAccess ? 'Ukryj dostęp' : 'Dostęp'}
                     </button>
                     {isConfirmingDelete ? (
                         <button
@@ -2200,6 +2698,7 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
             ) : null}
 
             {isShowingRuns ? <RunsPanel userGameId={entry._id} /> : null}
+            {isShowingAccess ? <AccessPanel userGameId={entry._id} /> : null}
         </li>
     )
 }

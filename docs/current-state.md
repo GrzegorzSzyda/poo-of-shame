@@ -257,6 +257,8 @@ Zasady:
   utworzyc nowy run z tym statusem,
 - reczne dodawanie w tym slice nie tworzy jeszcze `gameAccess`, ale migracja
   legacy potrafi utworzyc `gameAccess` na podstawie starych platform,
+- `/library` ma tez reczny panel `Dostęp` pod wpisem gry:
+  dodawanie, edycje i usuwanie rekordow `gameAccess`,
 - `/library` ma juz shell zakladek pod docelowe widoki po migracji,
 - aktywny jest widok `Wszystkie` z backendowym filtrowaniem po tytule, statusie
   i obecnosci runu oraz z prosta paginacja stron,

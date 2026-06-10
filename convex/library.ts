@@ -63,6 +63,38 @@ const releaseYearFilterValidator = v.union(
     v.literal('unknown'),
     v.number(),
 )
+const accessPlatformValidator = v.union(
+    v.literal('pc'),
+    v.literal('playstation'),
+    v.literal('xbox'),
+    v.literal('switch'),
+    v.literal('mobile'),
+    v.literal('other'),
+)
+const accessSourceValidator = v.union(
+    v.literal('steam'),
+    v.literal('gog'),
+    v.literal('epic'),
+    v.literal('ea_app'),
+    v.literal('ubisoft_connect'),
+    v.literal('amazon_gaming'),
+    v.literal('ps_store'),
+    v.literal('ps_plus'),
+    v.literal('ps_disc'),
+    v.literal('xbox_store'),
+    v.literal('game_pass'),
+    v.literal('switch_eshop'),
+    v.literal('switch_card'),
+    v.literal('pc_disc'),
+    v.literal('other'),
+)
+const accessTypeValidator = v.union(
+    v.literal('owned'),
+    v.literal('subscription'),
+    v.literal('borrowed'),
+    v.literal('wishlist'),
+    v.literal('unknown'),
+)
 
 type UserGameStatus =
     | 'wanted'
@@ -299,6 +331,17 @@ const toRunListItem = (run: Doc<'gameRuns'>) => ({
     updatedAt: run.updatedAt,
 })
 
+const toAccessListItem = (access: Doc<'gameAccess'>) => ({
+    _id: access._id,
+    platform: access.platform,
+    source: access.source,
+    accessType: access.accessType,
+    isAvailable: access.isAvailable,
+    note: access.note,
+    createdAt: access.createdAt,
+    updatedAt: access.updatedAt,
+})
+
 const toActiveRunListItem = (
     run: Doc<'gameRuns'>,
     userGame: Doc<'userGames'> | null,
@@ -532,6 +575,11 @@ const matchesReleaseYearFilter = (
     }
 
     return game.releaseYear === yearFilter
+}
+
+const normalizeOptionalNote = (value: string | undefined) => {
+    const trimmed = value?.trim()
+    return trimmed && trimmed.length > 0 ? trimmed : undefined
 }
 
 const findLatestRunForUserGame = async (
@@ -1276,6 +1324,160 @@ export const removeGameFromLibrary = mutation({
         }
 
         await ctx.db.delete(args.userGameId)
+    },
+})
+
+export const listAccessForUserGame = query({
+    args: {
+        userGameId: v.id('userGames'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const accessRecords = await ctx.db
+            .query('gameAccess')
+            .withIndex('by_user_userGame', (q) =>
+                q.eq('userId', identity.subject).eq('userGameId', args.userGameId),
+            )
+            .order('desc')
+            .take(50)
+
+        return accessRecords.map(toAccessListItem)
+    },
+})
+
+export const createGameAccess = mutation({
+    args: {
+        userGameId: v.id('userGames'),
+        platform: accessPlatformValidator,
+        source: accessSourceValidator,
+        accessType: accessTypeValidator,
+        isAvailable: v.boolean(),
+        note: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const existing = await ctx.db
+            .query('gameAccess')
+            .withIndex('by_user_userGame', (q) =>
+                q.eq('userId', identity.subject).eq('userGameId', args.userGameId),
+            )
+            .collect()
+
+        const duplicate = existing.some(
+            (record) =>
+                record.platform === args.platform &&
+                record.source === args.source &&
+                record.accessType === args.accessType,
+        )
+
+        if (duplicate) {
+            throw new ConvexError('GAME_ACCESS_ALREADY_EXISTS')
+        }
+
+        const now = Date.now()
+        return await ctx.db.insert('gameAccess', {
+            userId: identity.subject,
+            userGameId: userGame._id,
+            gameId: userGame.gameId,
+            platform: args.platform,
+            source: args.source,
+            accessType: args.accessType,
+            isAvailable: args.isAvailable,
+            note: normalizeOptionalNote(args.note),
+            createdAt: now,
+            updatedAt: now,
+        })
+    },
+})
+
+export const updateGameAccess = mutation({
+    args: {
+        accessId: v.id('gameAccess'),
+        platform: accessPlatformValidator,
+        source: accessSourceValidator,
+        accessType: accessTypeValidator,
+        isAvailable: v.boolean(),
+        note: v.optional(v.string()),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const access = await ctx.db.get(args.accessId)
+
+        if (!access) {
+            throw new ConvexError('GAME_ACCESS_NOT_FOUND')
+        }
+
+        if (access.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const siblings = await ctx.db
+            .query('gameAccess')
+            .withIndex('by_user_userGame', (q) =>
+                q.eq('userId', identity.subject).eq('userGameId', access.userGameId),
+            )
+            .collect()
+
+        const duplicate = siblings.some(
+            (record) =>
+                record._id !== access._id &&
+                record.platform === args.platform &&
+                record.source === args.source &&
+                record.accessType === args.accessType,
+        )
+
+        if (duplicate) {
+            throw new ConvexError('GAME_ACCESS_ALREADY_EXISTS')
+        }
+
+        await ctx.db.patch(access._id, {
+            platform: args.platform,
+            source: args.source,
+            accessType: args.accessType,
+            isAvailable: args.isAvailable,
+            note: normalizeOptionalNote(args.note),
+            updatedAt: Date.now(),
+        })
+    },
+})
+
+export const deleteGameAccess = mutation({
+    args: {
+        accessId: v.id('gameAccess'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const access = await ctx.db.get(args.accessId)
+
+        if (!access) {
+            throw new ConvexError('GAME_ACCESS_NOT_FOUND')
+        }
+
+        if (access.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        await ctx.db.delete(access._id)
     },
 })
 

@@ -31,6 +31,7 @@ const gameRunTypeValidator = v.union(
 )
 
 const runDatePrecisionValidator = v.union(v.literal('exact'), v.literal('unknown'))
+const runSuggestionModeValidator = v.union(v.literal('latest'), v.literal('new'))
 
 type UserGameStatus =
     | 'wanted'
@@ -122,6 +123,8 @@ const toLibraryGame = (userGame: Doc<'userGames'>, game: Doc<'games'> | null) =>
     status: userGame.status,
     interest: userGame.interest,
     note: userGame.note,
+    pinnedRunId: userGame.pinnedRunId,
+    lastRunId: userGame.lastRunId,
     updatedAt: userGame.updatedAt,
     game: game
         ? {
@@ -465,6 +468,67 @@ export const createGameRun = mutation({
         })
 
         return runId
+    },
+})
+
+export const applyRunSuggestion = mutation({
+    args: {
+        userGameId: v.id('userGames'),
+        status: gameRunStatusValidator,
+        mode: runSuggestionModeValidator,
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            throw new ConvexError('USER_GAME_NOT_FOUND')
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const now = Date.now()
+
+        if (args.mode === 'latest') {
+            if (!userGame.lastRunId) {
+                throw new ConvexError('GAME_RUN_NOT_FOUND')
+            }
+
+            const run = await getOwnedRun(ctx, identity.subject, userGame.lastRunId)
+            assertRunBelongsToUserGame(run, userGame)
+
+            await ctx.db.patch(run._id, {
+                status: args.status,
+                updatedAt: now,
+            })
+
+            await ctx.db.patch(userGame._id, {
+                updatedAt: now,
+            })
+
+            return { mode: args.mode, runId: run._id }
+        }
+
+        const runId = await ctx.db.insert('gameRuns', {
+            userId: identity.subject,
+            userGameId: userGame._id,
+            gameId: userGame.gameId,
+            status: args.status,
+            startedPrecision: 'unknown',
+            finishedPrecision: 'unknown',
+            createdAt: now,
+            updatedAt: now,
+        })
+
+        await ctx.db.patch(userGame._id, {
+            lastRunId: runId,
+            pinnedRunId: userGame.pinnedRunId ?? runId,
+            updatedAt: now,
+        })
+
+        return { mode: args.mode, runId }
     },
 })
 

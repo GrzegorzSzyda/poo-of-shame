@@ -54,6 +54,8 @@ type LibraryEntry = {
     _id: Id<'userGames'>
     status: UserGameStatus
     interest: number
+    pinnedRunId?: Id<'gameRuns'>
+    lastRunId?: Id<'gameRuns'>
     game: {
         title: string
         releaseDate?: string
@@ -205,6 +207,28 @@ const getRunSuggestionForGameStatus = (status: UserGameStatus) => {
         default:
             return null
     }
+}
+
+const getSuggestedRunStatus = (status: UserGameStatus): GameRunStatus | null => {
+    switch (status) {
+        case 'playing':
+            return 'playing'
+        case 'completed':
+            return 'completed'
+        case 'mastered':
+            return 'mastered'
+        case 'dropped':
+            return 'dropped'
+        default:
+            return null
+    }
+}
+
+const getRunSuggestionActionLabel = (mode: 'latest' | 'new', status: GameRunStatus) => {
+    const statusLabel = runStatusLabels[status].toLowerCase()
+    return mode === 'latest'
+        ? `Oznacz ostatni run jako ${statusLabel}`
+        : `Utwórz nowy run: ${statusLabel}`
 }
 
 const RunListItem = ({ run }: { run: GameRun }) => {
@@ -787,33 +811,46 @@ const RunsPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
 const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
     const updateLibraryGame = useMutation(api.library.updateLibraryGame)
     const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
+    const applyRunSuggestion = useMutation(api.library.applyRunSuggestion)
     const [isEditing, setIsEditing] = useState(false)
     const [isShowingRuns, setIsShowingRuns] = useState(false)
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
     const [status, setStatus] = useState<UserGameStatus>(entry.status)
     const [interest, setInterest] = useState(entry.interest)
     const [runSuggestion, setRunSuggestion] = useState<string | null>(null)
+    const [suggestedRunStatus, setSuggestedRunStatus] = useState<GameRunStatus | null>(
+        null,
+    )
     const [error, setError] = useState<string | null>(null)
+    const [message, setMessage] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [runSuggestionMode, setRunSuggestionMode] = useState<'latest' | 'new' | null>(
+        null,
+    )
     const showsInterest = shouldShowInterest(status)
 
     const handleCancel = () => {
         setStatus(entry.status)
         setInterest(entry.interest)
         setRunSuggestion(null)
+        setSuggestedRunStatus(null)
         setError(null)
+        setMessage(null)
         setIsEditing(false)
     }
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault()
         setError(null)
+        setMessage(null)
         setIsSubmitting(true)
 
         try {
             const nextRunSuggestion =
                 status !== entry.status ? getRunSuggestionForGameStatus(status) : null
+            const nextSuggestedRunStatus =
+                status !== entry.status ? getSuggestedRunStatus(status) : null
 
             await updateLibraryGame({
                 userGameId: entry._id,
@@ -821,6 +858,7 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                 interest: showsInterest ? interest : 0,
             })
             setRunSuggestion(nextRunSuggestion)
+            setSuggestedRunStatus(nextSuggestedRunStatus)
             if (nextRunSuggestion) {
                 setIsShowingRuns(true)
             }
@@ -834,6 +872,7 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
 
     const handleDelete = async () => {
         setError(null)
+        setMessage(null)
         setIsDeleting(true)
 
         try {
@@ -842,6 +881,32 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
             setError(getLibraryErrorMessage(error, 'Nie udało się usunąć gry z kupki.'))
         } finally {
             setIsDeleting(false)
+        }
+    }
+
+    const handleRunSuggestion = async (mode: 'latest' | 'new') => {
+        if (!suggestedRunStatus) return
+
+        setError(null)
+        setMessage(null)
+        setRunSuggestionMode(mode)
+
+        try {
+            await applyRunSuggestion({
+                userGameId: entry._id,
+                status: suggestedRunStatus,
+                mode,
+            })
+            setMessage(
+                mode === 'latest' ? 'Zaktualizowano ostatni run.' : 'Utworzono nowy run.',
+            )
+            setRunSuggestion(null)
+            setSuggestedRunStatus(null)
+            setIsShowingRuns(true)
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się zastosować sugestii.'))
+        } finally {
+            setRunSuggestionMode(null)
         }
     }
 
@@ -922,11 +987,44 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
             {error && !isEditing ? (
                 <p className="mt-2 text-sm text-red-300">{error}</p>
             ) : null}
+            {message && !isEditing ? (
+                <p className="mt-2 text-sm text-teal-200">{message}</p>
+            ) : null}
 
             {runSuggestion && !isEditing ? (
                 <div className="mt-3 rounded-md border border-teal-900/70 bg-teal-950/30 p-3">
                     <p className="text-sm text-teal-100">{runSuggestion}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
+                        {suggestedRunStatus && entry.lastRunId ? (
+                            <button
+                                type="button"
+                                onClick={() => void handleRunSuggestion('latest')}
+                                disabled={runSuggestionMode !== null}
+                                className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {runSuggestionMode === 'latest'
+                                    ? 'Aktualizuję...'
+                                    : getRunSuggestionActionLabel(
+                                          'latest',
+                                          suggestedRunStatus,
+                                      )}
+                            </button>
+                        ) : null}
+                        {suggestedRunStatus ? (
+                            <button
+                                type="button"
+                                onClick={() => void handleRunSuggestion('new')}
+                                disabled={runSuggestionMode !== null}
+                                className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-100 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {runSuggestionMode === 'new'
+                                    ? 'Tworzę...'
+                                    : getRunSuggestionActionLabel(
+                                          'new',
+                                          suggestedRunStatus,
+                                      )}
+                            </button>
+                        ) : null}
                         <button
                             type="button"
                             onClick={() => setIsShowingRuns(true)}
@@ -936,7 +1034,10 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                         </button>
                         <button
                             type="button"
-                            onClick={() => setRunSuggestion(null)}
+                            onClick={() => {
+                                setRunSuggestion(null)
+                                setSuggestedRunStatus(null)
+                            }}
                             className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
                         >
                             Zamknij sugestię

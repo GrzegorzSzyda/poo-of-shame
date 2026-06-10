@@ -49,6 +49,8 @@ Zawiera:
 - przestawianie albo czyszczenie `lastRunId`/`pinnedRunId` po usunieciu runu,
 - miekka sugestie po zmianie statusu gry na `playing`, `completed`, `mastered`
   albo `dropped`; status gry nie zmienia runow automatycznie,
+- szybkie akcje w sugestii: oznaczenie ostatniego runu odpowiednim statusem albo
+  utworzenie nowego runu z tym statusem,
 - adminowy widok katalogu gier w `/admin/games`,
 - dodawanie gry do katalogu,
 - podpowiedzi IGDB w formularzu dodawania gry, bez zapisywania `igdbId`,
@@ -139,8 +141,6 @@ PORT=3002 bun run dev
 
 Najlepszy kolejny krok to domkniecie flow statusow i runow:
 
-- szybkie akcje z sugestii, np. "utworz run w trakcie" albo "oznacz ostatni run
-  jako ukonczony",
 - pelniejsze precyzje dat dla runow (`year`, `quarter`, `month`, `text`),
 - lepszy wybor, ktory run jest `pinnedRunId`.
 

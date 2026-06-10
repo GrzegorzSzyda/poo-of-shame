@@ -200,6 +200,7 @@ Backend:
 - `removeGameFromLibrary`
 - `listRunsForUserGame`
 - `createGameRun`
+- `applyRunSuggestion`
 - `updateGameRun`
 - `deleteGameRun`
 
@@ -227,6 +228,8 @@ Zasady:
 - zmiana statusu gry nie aktualizuje runow automatycznie; UI pokazuje miekka
   sugestie przejscia do runow dla statusow `playing`, `completed`, `mastered` i
   `dropped`,
+- sugestia pozwala jawnie oznaczyc ostatni run odpowiednim statusem albo
+  utworzyc nowy run z tym statusem,
 - ten slice nie tworzy jeszcze `gameAccess`.
 
 ## Lokalna Praca

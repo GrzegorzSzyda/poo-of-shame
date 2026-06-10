@@ -114,6 +114,7 @@ Issue #8 dostalo komentarz z zakresem wykonanej pracy.
 - `docs/current-state.md` - aktualna dokumentacja techniczna.
 - `docs/product-v1.md` - kierunek produktu.
 - `docs/library-views.md` - plan widokow biblioteki po migracji.
+- `docs/fresh-chat-context.md` - gotowy prompt i skrot dla swiezego chatu.
 
 ## Komendy Weryfikacyjne
 

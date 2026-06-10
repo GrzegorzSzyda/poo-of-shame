@@ -27,6 +27,7 @@ referencje, ale nowa implementacja powstaje od zera na branchu `rewrite`.
 - `docs/current-state.md` - aktualna architektura i zaimplementowane funkcje.
 - `docs/next-chat-handoff.md` - skrot dla kolejnych sesji z asystentem.
 - `docs/library-views.md` - plan widokow biblioteki po migracji.
+- `docs/fresh-chat-context.md` - gotowy kontekst startowy dla świeżego chatu.
 
 ## Development
 

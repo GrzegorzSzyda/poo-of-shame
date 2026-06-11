@@ -233,6 +233,10 @@ Akcje obejmuja:
 Backend ma tez lekkie query `getLibraryEntry`, ktore pozwala doczytac szczegoly
 pojedynczego `userGame`, gdy widok nie ma ich jeszcze w swoim payloadzie.
 
+W widokach agregujacych (`Gram teraz`, `Historia`, `Premiery`) panel akcji jest
+otwierany leniwie przyciskiem `Akcje`, zamiast montowac pelny formularz i
+podwidoki pod kazdym rekordem od razu.
+
 Pliki:
 
 - `src/pages/LibraryPage.tsx`

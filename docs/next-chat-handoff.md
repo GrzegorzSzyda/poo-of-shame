@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Unify userGame actions across library tabs
+Lazy-load library actions in aggregate views
 ```
 
 Zawiera:
@@ -87,6 +87,9 @@ Zawiera:
 - oba warianty maja filtrowanie po tytule, roku albo `brak roku`.
 - akcje `userGame` sa wspolne dla `Wszystkie`, `Kupka`, `Gram Teraz`,
   `Historia` i wpisow z `Premiery`, jesli gra istnieje juz w bibliotece,
+- w widokach agregujacych (`Gram Teraz`, `Historia`, `Premiery`) panel akcji
+  jest montowany leniwie po kliknieciu `Akcje`, bo bez tego pojawila sie
+  regresja wydajnosciowa i problemy z dzialaniem widokow,
 - reczny panel `Dostęp` pod wpisem gry w `/library`,
 - backendowe query/mutacje:
   `listAccessForUserGame`, `createGameAccess`, `updateGameAccess`,
@@ -104,8 +107,6 @@ Zawiera:
   `getLegacySemanticBackfillPreview`, `backfillLegacySemanticBatch`.
 
 Push wykonany na `origin/rewrite`.
-
-Push po tej sesji trzeba wykonac na `origin/rewrite`.
 
 ## Wazne Decyzje Produktowe
 
@@ -186,15 +187,18 @@ PORT=3002 bun run dev
 
 ## Najbardziej Naturalny Nastepny Task
 
-Migracja zostala uruchomiona przez uzytkownika. Najlepszy kolejny krok to
-zbudowac widoki biblioteki po migracji zgodnie z `docs/library-views.md`.
+Widoki biblioteki po migracji juz dzialaja w podstawowym zakresie. Najlepszy
+kolejny krok to dopracowanie UX i filtrow tam, gdzie model danych juz jest, ale
+UI jest jeszcze techniczne.
 
 Priorytet implementacji:
 
-- dopracowanie szczegolow UX widokow biblioteki,
-- przemyslenie UX i filtrow wokol `gameAccess`,
-- uruchomienie backfillu `gameAccess` na realnych danych i weryfikacja wyniku,
+- dopracowanie UX i filtrow wokol `gameAccess`,
 - uruchomienie repairu `wanted/rating` na realnych danych i weryfikacja wyniku,
-- ewentualne dodatkowe filtry i lepsze sortowanie widokow premier.
+- zweryfikowanie na danych, czy zostaly jeszcze jakies legacy edge-case'y
+  migracji,
+- ewentualne dodatkowe filtry i lepsze sortowanie widokow premier,
+- ewentualne porzadki/refaktor `src/pages/LibraryPage.tsx`, bo komponent jest
+  juz duzy mimo dzialajacych widokow.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

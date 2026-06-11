@@ -11,21 +11,24 @@ Przeczytaj najpierw:
 - `docs/current-state.md`
 - `docs/next-chat-handoff.md`
 - `docs/library-views.md`
+- `docs/fresh-chat-context.md`
 
 Nie zaczynaj od zgadywania. Sprawdz lokalny stan repo (`git status`) i aktualny
 kod. Pracujemy malymi krokami, ale z porzadnym modelem danych. Po zmianach
 uruchamiaj `bun run check`, commituj i pushuj na `origin/rewrite`.
 
-Najblizszy task: zaczac widoki biblioteki po migracji. Priorytet:
-1. `Wszystkie` z filtrowaniem i limitem/stronicowaniem.
-2. `Kupka` bez statusu `playing`.
-3. `Gram Teraz` po `gameRuns.status = playing`.
-4. `Historia` z wyborem roku.
-5. `Premiery`: moje premiery i katalogowe.
+Widoki biblioteki po migracji juz sa:
+- `Wszystkie`
+- `Kupka`
+- `Gram teraz`
+- `Historia`
+- `Premiery`
 
-Najlepiej zacznij od issue #15 albo #20:
-- #15: Dodać widok Wszystkie z filtrowaniem i stronicowaniem.
-- #20: Przebudować bibliotekę na zakładki widoków.
+Aktualny fokus to dopracowanie tego, co juz jest:
+1. UX i filtry `gameAccess`.
+2. Weryfikacja migracji i repairu `wanted/rating` na realnych danych.
+3. Ewentualne dodatkowe filtry/sortowanie w `Premiery`.
+4. Porzadki/refaktor `src/pages/LibraryPage.tsx`, jesli zacznie przeszkadzac.
 
 Ważne decyzje:
 - `libraryEntries` to legacy. Nie usuwać.
@@ -37,6 +40,8 @@ Ważne decyzje:
 - `pinnedRunId` ma być głównym runem, fallback to `lastRunId`.
 - Backend ma mieć query pod konkretne widoki, a nie pobierać wszystko i filtrować
   klientem.
+- W widokach agregujących akcje `userGame` są otwierane leniwie przyciskiem
+  `Akcje`, a nie montowane od razu pod każdym rekordem.
 ```
 
 ## Current State Summary
@@ -45,7 +50,7 @@ Ważne decyzje:
 - Local path: `/home/grzegorzszyda/Projekty/poo-of-shame`.
 - Branch: `rewrite`.
 - Remote: `origin/rewrite`.
-- Latest pushed commit at handoff time: `7b81645 Document post-migration library views`.
+- Latest pushed commit at handoff time: `53cafd7 Lazy-load library actions in aggregate views`.
 - Worktree should be clean after this handoff.
 
 ## Implemented
@@ -79,6 +84,7 @@ Ważne decyzje:
     - does not delete `libraryEntries`.
 - Docs:
     - `docs/library-views.md` defines post-migration views.
+    - `docs/current-state.md` and `docs/next-chat-handoff.md` are updated for the current migration/library state.
 
 ## Key Files
 
@@ -94,30 +100,14 @@ Ważne decyzje:
 - `docs/current-state.md`: current project state.
 - `docs/next-chat-handoff.md`: ongoing handoff.
 
-## Open GitHub Issues For Views
-
-- #15 `Dodać widok Wszystkie z filtrowaniem i stronicowaniem`
-- #16 `Dodać widok Kupka bez aktywnie granych gier`
-- #17 `Dodać widok Gram Teraz oparty o aktywne runy`
-- #18 `Dodać widok Historia z wyborem roku`
-- #19 `Dodać widoki Premiery: moje i katalogowe`
-- #20 `Przebudować bibliotekę na zakładki widoków`
-
 ## Suggested Next Move
 
-Start with #20 only if the UI needs structural cleanup first. Otherwise start
-with #15 and implement the smallest useful version of `Wszystkie`:
+Najbardziej naturalny kolejny krok:
 
-- add library view tabs,
-- keep current list as `Wszystkie`,
-- add backend query for filtered/paged library rows,
-- add title search,
-- add status filter,
-- add has-run/no-run filter,
-- avoid client-side filtering of all rows.
-
-Then implement #16 `Kupka` using its own query for `wanted` + `owned`, sorted by
-`interest desc` then `updatedAt desc`.
+- dopracowac UX `gameAccess`,
+- uruchomic i zweryfikowac repair `wanted/rating`,
+- sprawdzic, czy sa jeszcze legacy dane, ktorych nowy model nie obsluzyl,
+- ewentualnie rozbic `src/pages/LibraryPage.tsx` na mniejsze komponenty.
 
 ## Verification
 

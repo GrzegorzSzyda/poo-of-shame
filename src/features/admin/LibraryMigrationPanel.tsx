@@ -12,8 +12,13 @@ export const LibraryMigrationPanel = () => {
         api.migrations.getGameAccessBackfillPreview,
         {},
     )
+    const semanticBackfillPreview = useQuery(
+        api.migrations.getLegacySemanticBackfillPreview,
+        {},
+    )
     const runBatch = useMutation(api.migrations.runLibraryMigrationBatch)
     const runAccessBackfill = useMutation(api.migrations.backfillGameAccessBatch)
+    const runSemanticBackfill = useMutation(api.migrations.backfillLegacySemanticBatch)
     const [limit, setLimit] = useState(25)
     const [result, setResult] = useState<Awaited<ReturnType<typeof runBatch>> | null>(
         null,
@@ -21,9 +26,13 @@ export const LibraryMigrationPanel = () => {
     const [accessBackfillResult, setAccessBackfillResult] = useState<Awaited<
         ReturnType<typeof runAccessBackfill>
     > | null>(null)
+    const [semanticBackfillResult, setSemanticBackfillResult] = useState<Awaited<
+        ReturnType<typeof runSemanticBackfill>
+    > | null>(null)
     const [error, setError] = useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isBackfillingAccess, setIsBackfillingAccess] = useState(false)
+    const [isBackfillingSemantics, setIsBackfillingSemantics] = useState(false)
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault()
@@ -54,6 +63,22 @@ export const LibraryMigrationPanel = () => {
             setError(getMigrationErrorMessage(error))
         } finally {
             setIsBackfillingAccess(false)
+        }
+    }
+
+    const handleSemanticBackfill = async (event: FormEvent) => {
+        event.preventDefault()
+        setError(null)
+        setSemanticBackfillResult(null)
+        setIsBackfillingSemantics(true)
+
+        try {
+            const nextResult = await runSemanticBackfill({ limit })
+            setSemanticBackfillResult(nextResult)
+        } catch (error) {
+            setError(getMigrationErrorMessage(error))
+        } finally {
+            setIsBackfillingSemantics(false)
         }
     }
 
@@ -211,6 +236,88 @@ export const LibraryMigrationPanel = () => {
                         {accessBackfillResult.skippedMissingUserGame}. Pozostało
                         brakujących dostępów:{' '}
                         {accessBackfillResult.remainingAccessRecordsMissing}.
+                    </div>
+                ) : null}
+            </div>
+
+            <div className="border-t border-zinc-800 pt-4">
+                <div>
+                    <h4 className="font-medium text-white">Repair statusu i ratingu</h4>
+                    <p className="mt-1 text-sm leading-6 text-zinc-400">
+                        Naprawia dwa uproszczenia legacy: wpisy `backlog` bez platform
+                        ustawia na `wanted`, a brakujące oceny dopina do runów.
+                    </p>
+                </div>
+
+                {semanticBackfillPreview === undefined ? (
+                    <p className="mt-3 text-sm text-zinc-400">
+                        Ładowanie podglądu repairu statusu i ratingu...
+                    </p>
+                ) : (
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                        <MigrationStat
+                            label="Wanted do poprawy"
+                            value={semanticBackfillPreview.wantedStatusCandidates}
+                        />
+                        <MigrationStat
+                            label="Rating do dopięcia"
+                            value={semanticBackfillPreview.ratingBackfillCandidates}
+                        />
+                        <MigrationStat
+                            label="Brak userGame"
+                            value={semanticBackfillPreview.entriesMissingUserGame}
+                        />
+                    </div>
+                )}
+
+                <form
+                    onSubmit={(event) => void handleSemanticBackfill(event)}
+                    className="mt-4 flex flex-wrap items-end gap-3"
+                >
+                    <div className="space-y-1.5">
+                        <label
+                            htmlFor="migration-semantic-limit"
+                            className="text-sm text-zinc-300"
+                        >
+                            Rozmiar partii
+                        </label>
+                        <input
+                            id="migration-semantic-limit"
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={limit}
+                            onChange={(event) => setLimit(Number(event.target.value))}
+                            className="h-10 w-32 rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100 outline-none focus:border-teal-300"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        disabled={
+                            isBackfillingSemantics ||
+                            semanticBackfillPreview === undefined ||
+                            (semanticBackfillPreview.wantedStatusCandidates === 0 &&
+                                semanticBackfillPreview.ratingBackfillCandidates === 0)
+                        }
+                        className="inline-flex h-10 items-center justify-center rounded-md bg-zinc-100 px-4 text-sm font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isBackfillingSemantics
+                            ? 'Naprawiam...'
+                            : 'Napraw statusy i ratingi'}
+                    </button>
+                </form>
+
+                {semanticBackfillResult ? (
+                    <div className="mt-4 rounded-md border border-teal-900/70 bg-teal-950/30 p-3 text-sm text-teal-100">
+                        Sprawdzono {semanticBackfillResult.inspectedEntries} wpisów.
+                        Poprawiono statusy wanted:{' '}
+                        {semanticBackfillResult.updatedWantedStatuses}, utworzono runy:{' '}
+                        {semanticBackfillResult.createdRuns}, dopięto rating do
+                        istniejących runów: {semanticBackfillResult.patchedRunRatings}.
+                        Pozostało wanted:{' '}
+                        {semanticBackfillResult.remainingWantedStatusCandidates},
+                        pozostało ratingów:{' '}
+                        {semanticBackfillResult.remainingRatingBackfillCandidates}.
                     </div>
                 ) : null}
             </div>

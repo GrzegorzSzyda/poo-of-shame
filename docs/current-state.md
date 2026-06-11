@@ -211,6 +211,12 @@ partiami. Migracja:
 Panel ma tez osobny backfill brakujacych `gameAccess` dla wpisow juz
 zmigrowanych, oparty o stare `libraryEntries.platforms`.
 
+Panel ma tez osobny repair semantyki legacy:
+
+- `backlog` bez platform jest poprawiany do `wanted`,
+- brakujacy legacy `rating` jest dopinany do istniejącego runu albo do nowo
+  utworzonego runu.
+
 ### Biblioteka uzytkownika
 
 Pliki:

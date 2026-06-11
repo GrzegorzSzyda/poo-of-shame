@@ -49,6 +49,23 @@ const toGameRunStatus = (status: LegacyProgressStatus): GameRunStatus | null => 
     }
 }
 
+const toBackfilledRunStatus = (
+    status: LegacyProgressStatus,
+): Doc<'gameRuns'>['status'] => {
+    switch (status) {
+        case 'backlog':
+            return 'planned'
+        case 'playing':
+            return 'playing'
+        case 'completed':
+            return 'completed'
+        case 'done':
+            return 'mastered'
+        case 'dropped':
+            return 'dropped'
+    }
+}
+
 const toInterest = (entry: Doc<'libraryEntries'>) =>
     entry.progressStatus === 'backlog' || entry.progressStatus === 'playing'
         ? entry.wantsToPlay
@@ -172,6 +189,42 @@ const countMissingAccessRecordsForEntry = async (
 const countPendingEntries = (entries: Array<Doc<'libraryEntries'>>) =>
     entries.filter((entry) => !entry.migratedAt).length
 
+const shouldBackfillWantedStatus = (
+    entry: Doc<'libraryEntries'>,
+    userGame: Doc<'userGames'> | null,
+) =>
+    entry.progressStatus === 'backlog' &&
+    entry.platforms.length === 0 &&
+    userGame !== null &&
+    userGame.status !== 'wanted'
+
+const getLegacyRatingBackfillNeed = async (
+    ctx: QueryCtx | MutationCtx,
+    entry: Doc<'libraryEntries'>,
+    userGame: Doc<'userGames'> | null,
+) => {
+    if (!userGame) {
+        return {
+            needsBackfill: false,
+            runs: [] as Array<Doc<'gameRuns'>>,
+        }
+    }
+
+    const runs = await ctx.db
+        .query('gameRuns')
+        .withIndex('by_user_userGame', (q) =>
+            q.eq('userId', entry.userId).eq('userGameId', userGame._id),
+        )
+        .collect()
+
+    const hasRatingOnAnyRun = runs.some((run) => run.rating !== undefined)
+
+    return {
+        needsBackfill: !hasRatingOnAnyRun,
+        runs,
+    }
+}
+
 const toPreview = async (ctx: QueryCtx) => {
     const entries = await ctx.db.query('libraryEntries').collect()
 
@@ -255,6 +308,37 @@ const toGameAccessBackfillPreview = async (ctx: QueryCtx | MutationCtx) => {
     }
 }
 
+const toLegacySemanticBackfillPreview = async (ctx: QueryCtx | MutationCtx) => {
+    const entries = await ctx.db.query('libraryEntries').collect()
+
+    let wantedStatusCandidates = 0
+    let ratingBackfillCandidates = 0
+    let entriesMissingUserGame = 0
+
+    for (const entry of entries) {
+        const userGame = await getExistingUserGame(ctx, entry)
+        if (!userGame) {
+            entriesMissingUserGame += 1
+            continue
+        }
+
+        if (shouldBackfillWantedStatus(entry, userGame)) {
+            wantedStatusCandidates += 1
+        }
+
+        const { needsBackfill } = await getLegacyRatingBackfillNeed(ctx, entry, userGame)
+        if (needsBackfill) {
+            ratingBackfillCandidates += 1
+        }
+    }
+
+    return {
+        wantedStatusCandidates,
+        ratingBackfillCandidates,
+        entriesMissingUserGame,
+    }
+}
+
 export const getLibraryMigrationPreview = query({
     args: {},
     handler: async (ctx) => {
@@ -268,6 +352,14 @@ export const getGameAccessBackfillPreview = query({
     handler: async (ctx) => {
         await ensureAdmin(ctx)
         return await toGameAccessBackfillPreview(ctx)
+    },
+})
+
+export const getLegacySemanticBackfillPreview = query({
+    args: {},
+    handler: async (ctx) => {
+        await ensureAdmin(ctx)
+        return await toLegacySemanticBackfillPreview(ctx)
     },
 })
 
@@ -504,6 +596,97 @@ export const backfillGameAccessBatch = mutation({
         return {
             ...result,
             remainingAccessRecordsMissing: preview.accessRecordsMissing,
+        }
+    },
+})
+
+export const backfillLegacySemanticBatch = mutation({
+    args: {
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+        const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
+        const entries = await ctx.db.query('libraryEntries').collect()
+
+        const result = {
+            inspectedEntries: 0,
+            updatedWantedStatuses: 0,
+            createdRuns: 0,
+            patchedRunRatings: 0,
+            skippedMissingUserGame: 0,
+        }
+
+        for (const entry of entries) {
+            if (result.inspectedEntries >= limit) {
+                break
+            }
+
+            const userGame = await getExistingUserGame(ctx, entry)
+            if (!userGame) {
+                result.skippedMissingUserGame += 1
+                continue
+            }
+
+            const needsWantedStatus = shouldBackfillWantedStatus(entry, userGame)
+            const ratingState = await getLegacyRatingBackfillNeed(ctx, entry, userGame)
+
+            if (!needsWantedStatus && !ratingState.needsBackfill) {
+                continue
+            }
+
+            result.inspectedEntries += 1
+            const now = Date.now()
+
+            if (needsWantedStatus) {
+                await ctx.db.patch(userGame._id, {
+                    status: 'wanted',
+                    updatedAt: Math.max(now, userGame.updatedAt),
+                })
+                result.updatedWantedStatuses += 1
+            }
+
+            if (ratingState.needsBackfill) {
+                const latestRun = ratingState.runs
+                    .slice()
+                    .sort((left, right) => right.updatedAt - left.updatedAt)[0]
+
+                if (latestRun) {
+                    await ctx.db.patch(latestRun._id, {
+                        rating: entry.rating,
+                        updatedAt: Math.max(now, latestRun.updatedAt),
+                    })
+                    result.patchedRunRatings += 1
+                } else {
+                    const runId = await ctx.db.insert('gameRuns', {
+                        userId: entry.userId,
+                        userGameId: userGame._id,
+                        gameId: entry.gameId,
+                        status: toBackfilledRunStatus(entry.progressStatus),
+                        runType: 'first_playthrough',
+                        rating: entry.rating,
+                        startedPrecision: 'unknown',
+                        finishedPrecision: 'unknown',
+                        createdAt: entry.createdAt,
+                        updatedAt: entry.updatedAt,
+                    })
+
+                    await ctx.db.patch(userGame._id, {
+                        lastRunId: userGame.lastRunId ?? runId,
+                        pinnedRunId: userGame.pinnedRunId ?? runId,
+                        updatedAt: Math.max(now, userGame.updatedAt),
+                    })
+                    result.createdRuns += 1
+                }
+            }
+        }
+
+        const preview = await toLegacySemanticBackfillPreview(ctx)
+
+        return {
+            ...result,
+            remainingWantedStatusCandidates: preview.wantedStatusCandidates,
+            remainingRatingBackfillCandidates: preview.ratingBackfillCandidates,
         }
     },
 })

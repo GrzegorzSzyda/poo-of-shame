@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add legacy gameAccess backfill in admin migration
+Add legacy wanted/rating repair in admin migration
 ```
 
 Zawiera:
@@ -94,6 +94,10 @@ Zawiera:
   `gameAccess` na podstawie `libraryEntries.platforms`,
 - backendowe funkcje:
   `getGameAccessBackfillPreview`, `backfillGameAccessBatch`.
+- panel `/admin/migration` ma tez osobny preview i batch repairu:
+  `backlog bez platform -> wanted` oraz dopiecia legacy `rating` do runow,
+- backendowe funkcje:
+  `getLegacySemanticBackfillPreview`, `backfillLegacySemanticBatch`.
 
 Push wykonany na `origin/rewrite`.
 
@@ -186,6 +190,7 @@ Priorytet implementacji:
 - dopracowanie szczegolow UX widokow biblioteki,
 - przemyslenie UX i filtrów wokol `gameAccess`,
 - uruchomienie backfillu `gameAccess` na realnych danych i weryfikacja wyniku,
+- uruchomienie repairu `wanted/rating` na realnych danych i weryfikacja wyniku,
 - ewentualne dodatkowe filtry i lepsze sortowanie widokow premier.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

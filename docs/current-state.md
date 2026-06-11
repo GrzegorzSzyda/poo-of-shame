@@ -208,6 +208,9 @@ partiami. Migracja:
 - oznacza stare wpisy polami `migratedToUserGameId` i `migratedAt`,
 - nie usuwa `libraryEntries`.
 
+Panel ma tez osobny backfill brakujacych `gameAccess` dla wpisow juz
+zmigrowanych, oparty o stare `libraryEntries.platforms`.
+
 ### Biblioteka uzytkownika
 
 Pliki:

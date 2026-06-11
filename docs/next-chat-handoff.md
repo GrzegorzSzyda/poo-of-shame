@@ -24,7 +24,7 @@ Ten dokument jest skrotem kontekstu dla kolejnych sesji z asystentem.
 Ostatnia zmiana w tej sesji:
 
 ```text
-Add manual game access panel in library
+Add legacy gameAccess backfill in admin migration
 ```
 
 Zawiera:
@@ -90,6 +90,10 @@ Zawiera:
   `listAccessForUserGame`, `createGameAccess`, `updateGameAccess`,
   `deleteGameAccess`,
 - panel pozwala zapisywac platforme, zrodlo, typ dostepu, dostepnosc i notatke.
+- panel `/admin/migration` ma osobny preview i batch backfillu brakujacych
+  `gameAccess` na podstawie `libraryEntries.platforms`,
+- backendowe funkcje:
+  `getGameAccessBackfillPreview`, `backfillGameAccessBatch`.
 
 Push wykonany na `origin/rewrite`.
 
@@ -181,6 +185,7 @@ Priorytet implementacji:
 
 - dopracowanie szczegolow UX widokow biblioteki,
 - przemyslenie UX i filtrów wokol `gameAccess`,
+- uruchomienie backfillu `gameAccess` na realnych danych i weryfikacja wyniku,
 - ewentualne dodatkowe filtry i lepsze sortowanie widokow premier.
 
 Nie usuwac `libraryEntries`, dopoki migracja nie zostanie zweryfikowana na danych.

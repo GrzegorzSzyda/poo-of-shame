@@ -138,6 +138,37 @@ const getExistingUserGame = async (
         )
         .unique()
 
+const countMissingAccessRecordsForEntry = async (
+    ctx: QueryCtx | MutationCtx,
+    entry: Doc<'libraryEntries'>,
+    userGameId: Id<'userGames'>,
+) => {
+    const existingAccessRecords = await ctx.db
+        .query('gameAccess')
+        .withIndex('by_user_userGame', (q) =>
+            q.eq('userId', entry.userId).eq('userGameId', userGameId),
+        )
+        .collect()
+
+    let missingRecords = 0
+
+    for (const legacyPlatform of entry.platforms) {
+        const access = toAccess(legacyPlatform)
+        const alreadyExists = existingAccessRecords.some(
+            (record) =>
+                record.platform === access.platform &&
+                record.source === access.source &&
+                record.accessType === access.accessType,
+        )
+
+        if (!alreadyExists) {
+            missingRecords += 1
+        }
+    }
+
+    return missingRecords
+}
+
 const countPendingEntries = (entries: Array<Doc<'libraryEntries'>>) =>
     entries.filter((entry) => !entry.migratedAt).length
 
@@ -187,11 +218,56 @@ const toPreview = async (ctx: QueryCtx) => {
     }
 }
 
+const toGameAccessBackfillPreview = async (ctx: QueryCtx | MutationCtx) => {
+    const entries = await ctx.db.query('libraryEntries').collect()
+
+    let legacyEntriesWithPlatforms = 0
+    let entriesWithResolvableUserGame = 0
+    let entriesMissingUserGame = 0
+    let accessRecordsMissing = 0
+
+    for (const entry of entries) {
+        if (entry.platforms.length === 0) {
+            continue
+        }
+
+        legacyEntriesWithPlatforms += 1
+
+        const userGame = await getExistingUserGame(ctx, entry)
+        if (!userGame) {
+            entriesMissingUserGame += 1
+            continue
+        }
+
+        entriesWithResolvableUserGame += 1
+        accessRecordsMissing += await countMissingAccessRecordsForEntry(
+            ctx,
+            entry,
+            userGame._id,
+        )
+    }
+
+    return {
+        legacyEntriesWithPlatforms,
+        entriesWithResolvableUserGame,
+        entriesMissingUserGame,
+        accessRecordsMissing,
+    }
+}
+
 export const getLibraryMigrationPreview = query({
     args: {},
     handler: async (ctx) => {
         await ensureAdmin(ctx)
         return await toPreview(ctx)
+    },
+})
+
+export const getGameAccessBackfillPreview = query({
+    args: {},
+    handler: async (ctx) => {
+        await ensureAdmin(ctx)
+        return await toGameAccessBackfillPreview(ctx)
     },
 })
 
@@ -332,6 +408,102 @@ export const runLibraryMigrationBatch = mutation({
             remaining: countPendingEntries(
                 await ctx.db.query('libraryEntries').collect(),
             ),
+        }
+    },
+})
+
+export const backfillGameAccessBatch = mutation({
+    args: {
+        limit: v.optional(v.number()),
+    },
+    handler: async (ctx, args) => {
+        await ensureAdmin(ctx)
+        const limit = Math.min(Math.max(args.limit ?? 25, 1), 100)
+        const entries = await ctx.db.query('libraryEntries').collect()
+        const candidateEntries = entries.filter((entry) => entry.platforms.length > 0)
+
+        const result = {
+            inspectedEntries: 0,
+            entriesWithCreatedAccess: 0,
+            skippedMissingUserGame: 0,
+            createdAccessRecords: 0,
+        }
+
+        for (const entry of candidateEntries) {
+            if (result.inspectedEntries >= limit) {
+                break
+            }
+
+            result.inspectedEntries += 1
+
+            const userGame = await getExistingUserGame(ctx, entry)
+            if (!userGame) {
+                result.skippedMissingUserGame += 1
+                continue
+            }
+
+            const existingAccessRecords = await ctx.db
+                .query('gameAccess')
+                .withIndex('by_user_userGame', (q) =>
+                    q.eq('userId', entry.userId).eq('userGameId', userGame._id),
+                )
+                .collect()
+
+            let createdForEntry = 0
+
+            for (const legacyPlatform of entry.platforms) {
+                const access = toAccess(legacyPlatform)
+                const alreadyExists = existingAccessRecords.some(
+                    (record) =>
+                        record.platform === access.platform &&
+                        record.source === access.source &&
+                        record.accessType === access.accessType,
+                )
+
+                if (alreadyExists) continue
+
+                await ctx.db.insert('gameAccess', {
+                    userId: entry.userId,
+                    userGameId: userGame._id,
+                    gameId: entry.gameId,
+                    ...access,
+                    createdAt: entry.createdAt,
+                    updatedAt: entry.updatedAt,
+                })
+                existingAccessRecords.push({
+                    ...(access as Omit<
+                        Doc<'gameAccess'>,
+                        | '_id'
+                        | '_creationTime'
+                        | 'userId'
+                        | 'userGameId'
+                        | 'gameId'
+                        | 'createdAt'
+                        | 'updatedAt'
+                    >),
+                    _id: `${entry._id}-${legacyPlatform}` as Id<'gameAccess'>,
+                    _creationTime: entry.createdAt,
+                    userId: entry.userId,
+                    userGameId: userGame._id,
+                    gameId: entry.gameId,
+                    createdAt: entry.createdAt,
+                    updatedAt: entry.updatedAt,
+                    note: undefined,
+                })
+                createdForEntry += 1
+                result.createdAccessRecords += 1
+            }
+
+            if (createdForEntry > 0) {
+                result.entriesWithCreatedAccess += 1
+            }
+        }
+
+        const preview = await toGameAccessBackfillPreview(ctx)
+
+        return {
+            ...result,
+            remainingAccessRecordsMissing: preview.accessRecordsMissing,
         }
     },
 })

@@ -1,6 +1,6 @@
 # Aktualny Stan Projektu
 
-Ostatnia aktualizacja: 2026-06-10.
+Ostatnia aktualizacja: 2026-06-11.
 
 ## Cel Rewrite
 
@@ -218,6 +218,20 @@ Panel ma tez osobny repair semantyki legacy:
   utworzonego runu.
 
 ### Biblioteka uzytkownika
+
+Widoki `/library` maja teraz wspolny zestaw akcji `userGame` dostepny nie tylko
+na `Wszystkie` i `Kupka`, ale tez w `Gram teraz`, `Historia` i przy wpisach z
+`Premiery`, jesli dana gra ma juz rekord `userGame`.
+
+Akcje obejmuja:
+
+- edycje statusu i `interest`,
+- panel runow,
+- panel dostepu,
+- usuwanie gry z biblioteki.
+
+Backend ma tez lekkie query `getLibraryEntry`, ktore pozwala doczytac szczegoly
+pojedynczego `userGame`, gdy widok nie ma ich jeszcze w swoim payloadzie.
 
 Pliki:
 

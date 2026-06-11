@@ -351,6 +351,8 @@ const toActiveRunListItem = (
     userGameId: run.userGameId,
     gameId: run.gameId,
     userGameStatus: userGame?.status ?? null,
+    interest: userGame?.interest,
+    lastRunId: userGame?.lastRunId,
     game: game
         ? {
               _id: game._id,
@@ -374,6 +376,8 @@ const toHistoryRunListItem = (
     userGameId: run.userGameId,
     gameId: run.gameId,
     userGameStatus: userGame?.status ?? null,
+    interest: userGame?.interest,
+    lastRunId: userGame?.lastRunId,
     game: game
         ? {
               _id: game._id,
@@ -400,6 +404,7 @@ const toReleaseListItem = (game: Doc<'games'>, userGame?: Doc<'userGames'> | nul
     userGameId: userGame?._id,
     userGameStatus: userGame?.status,
     interest: userGame?.interest,
+    lastRunId: userGame?.lastRunId,
     updatedAt: userGame?.updatedAt,
 })
 
@@ -736,6 +741,27 @@ export const listMyLibrary = query({
                 return toLibraryGame(userGame, game)
             }),
         )
+    },
+})
+
+export const getLibraryEntry = query({
+    args: {
+        userGameId: v.id('userGames'),
+    },
+    handler: async (ctx, args) => {
+        const identity = await ensureAuthenticated(ctx)
+        const userGame = await ctx.db.get(args.userGameId)
+
+        if (!userGame) {
+            return null
+        }
+
+        if (userGame.userId !== identity.subject) {
+            throw new ConvexError('FORBIDDEN')
+        }
+
+        const game = await ctx.db.get(userGame.gameId)
+        return toLibraryGame(userGame, game)
     },
 })
 

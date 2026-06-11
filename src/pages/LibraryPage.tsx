@@ -123,6 +123,8 @@ type LibraryEntry = {
     } | null
 }
 
+type UserGameActionEntry = LibraryEntry
+
 type LibraryAllResult = {
     items: LibraryEntry[]
     total: number
@@ -143,6 +145,8 @@ type ActiveRunListItem = GameRun & {
     userGameId: Id<'userGames'>
     gameId: Id<'games'>
     userGameStatus: UserGameStatus | null
+    interest?: number
+    lastRunId?: Id<'gameRuns'>
     game: {
         _id: Id<'games'>
         title: string
@@ -167,6 +171,8 @@ type HistoryRunListItem = GameRun & {
     userGameId: Id<'userGames'>
     gameId: Id<'games'>
     userGameStatus: UserGameStatus | null
+    interest?: number
+    lastRunId?: Id<'gameRuns'>
     game: {
         _id: Id<'games'>
         title: string
@@ -206,6 +212,7 @@ type ReleaseListItem = {
     userGameId?: Id<'userGames'>
     userGameStatus?: UserGameStatus
     interest?: number
+    lastRunId?: Id<'gameRuns'>
     updatedAt?: number
 }
 
@@ -886,6 +893,19 @@ const ActiveRunsPanel = () => {
                                     </div>
                                 </div>
 
+                                <div className="mt-3 border-t border-zinc-800 pt-3">
+                                    <UserGameActions
+                                        userGameId={run.userGameId}
+                                        initialEntry={{
+                                            _id: run.userGameId,
+                                            status: run.userGameStatus ?? 'wanted',
+                                            interest: run.interest ?? 0,
+                                            lastRunId: run.lastRunId,
+                                            game: run.game,
+                                        }}
+                                    />
+                                </div>
+
                                 {run.note?.trim() ? (
                                     <p className="mt-3 text-sm text-zinc-400">
                                         {run.note}
@@ -979,6 +999,19 @@ const HistorySection = ({
                                     <p className="mt-1">Ocena: {run.rating}</p>
                                 ) : null}
                             </div>
+                        </div>
+
+                        <div className="mt-3 border-t border-zinc-800 pt-3">
+                            <UserGameActions
+                                userGameId={run.userGameId}
+                                initialEntry={{
+                                    _id: run.userGameId,
+                                    status: run.userGameStatus ?? 'wanted',
+                                    interest: run.interest ?? 0,
+                                    lastRunId: run.lastRunId,
+                                    game: run.game,
+                                }}
+                            />
                         </div>
 
                         {run.note?.trim() ? (
@@ -1255,6 +1288,31 @@ const ReleaseCalendarPanel = () => {
                                         )}
                                     </div>
                                 </div>
+
+                                {item.userGameId ? (
+                                    <div className="mt-3 border-t border-zinc-800 pt-3">
+                                        <UserGameActions
+                                            userGameId={item.userGameId}
+                                            initialEntry={{
+                                                _id: item.userGameId,
+                                                status: item.userGameStatus ?? 'wanted',
+                                                interest: item.interest ?? 0,
+                                                lastRunId: item.lastRunId,
+                                                game: {
+                                                    _id: item.gameId,
+                                                    title: item.title,
+                                                    releaseDate: item.releaseDate,
+                                                    releaseYear: item.releaseYear,
+                                                    releaseQuarter: item.releaseQuarter,
+                                                    releaseYearMonth:
+                                                        item.releaseYearMonth,
+                                                    releaseText: item.releaseText,
+                                                    coverImageUrl: item.coverImageUrl,
+                                                },
+                                            }}
+                                        />
+                                    </div>
+                                ) : null}
                             </li>
                         ))}
                     </ul>
@@ -1480,6 +1538,348 @@ const getRunSuggestionActionLabel = (mode: 'latest' | 'new', status: GameRunStat
     return mode === 'latest'
         ? `Oznacz ostatni run jako ${statusLabel}`
         : `Utwórz nowy run: ${statusLabel}`
+}
+
+const UserGameActions = ({
+    userGameId,
+    initialEntry,
+}: {
+    userGameId: Id<'userGames'>
+    initialEntry?: UserGameActionEntry
+}) => {
+    const updateLibraryGame = useMutation(api.library.updateLibraryGame)
+    const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
+    const applyRunSuggestion = useMutation(api.library.applyRunSuggestion)
+    const fetchedEntry = useQuery(
+        api.library.getLibraryEntry,
+        initialEntry ? 'skip' : { userGameId },
+    ) as UserGameActionEntry | null | undefined
+    const entry = fetchedEntry ?? initialEntry ?? null
+    const [isEditing, setIsEditing] = useState(false)
+    const [isShowingRuns, setIsShowingRuns] = useState(false)
+    const [isShowingAccess, setIsShowingAccess] = useState(false)
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
+    const [status, setStatus] = useState<UserGameStatus>(initialEntry?.status ?? 'wanted')
+    const [interest, setInterest] = useState(initialEntry?.interest ?? 50)
+    const [runSuggestion, setRunSuggestion] = useState<string | null>(null)
+    const [suggestedRunStatus, setSuggestedRunStatus] = useState<GameRunStatus | null>(
+        null,
+    )
+    const [error, setError] = useState<string | null>(null)
+    const [message, setMessage] = useState<string | null>(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [runSuggestionMode, setRunSuggestionMode] = useState<'latest' | 'new' | null>(
+        null,
+    )
+    const showsInterest = shouldShowInterest(status)
+
+    const resetForm = () => {
+        if (!entry) return
+        setStatus(entry.status)
+        setInterest(entry.interest)
+        setRunSuggestion(null)
+        setSuggestedRunStatus(null)
+        setError(null)
+        setMessage(null)
+    }
+
+    const handleToggleEdit = () => {
+        if (isEditing) {
+            resetForm()
+        } else if (entry) {
+            setStatus(entry.status)
+            setInterest(entry.interest)
+            setError(null)
+            setMessage(null)
+        }
+
+        setIsEditing((current) => !current)
+        setIsConfirmingDelete(false)
+    }
+
+    const handleCancel = () => {
+        resetForm()
+        setIsEditing(false)
+    }
+
+    const handleSubmit = async (event: FormEvent) => {
+        event.preventDefault()
+        if (!entry) return
+
+        setError(null)
+        setMessage(null)
+        setIsSubmitting(true)
+
+        try {
+            const nextRunSuggestion =
+                status !== entry.status ? getRunSuggestionForGameStatus(status) : null
+            const nextSuggestedRunStatus =
+                status !== entry.status ? getSuggestedRunStatus(status) : null
+
+            await updateLibraryGame({
+                userGameId: entry._id,
+                status,
+                interest: showsInterest ? interest : 0,
+            })
+            setRunSuggestion(nextRunSuggestion)
+            setSuggestedRunStatus(nextSuggestedRunStatus)
+            if (nextRunSuggestion) {
+                setIsShowingRuns(true)
+            }
+            setIsEditing(false)
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się zapisać zmian.'))
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleDelete = async () => {
+        if (!entry) return
+
+        setError(null)
+        setMessage(null)
+        setIsDeleting(true)
+
+        try {
+            await removeGameFromLibrary({ userGameId: entry._id })
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się usunąć gry z kupki.'))
+        } finally {
+            setIsDeleting(false)
+        }
+    }
+
+    const handleRunSuggestion = async (mode: 'latest' | 'new') => {
+        if (!entry || !suggestedRunStatus) return
+
+        setError(null)
+        setMessage(null)
+        setRunSuggestionMode(mode)
+
+        try {
+            await applyRunSuggestion({
+                userGameId: entry._id,
+                status: suggestedRunStatus,
+                mode,
+            })
+            setMessage(
+                mode === 'latest' ? 'Zaktualizowano ostatni run.' : 'Utworzono nowy run.',
+            )
+            setRunSuggestion(null)
+            setSuggestedRunStatus(null)
+            setIsShowingRuns(true)
+        } catch (error) {
+            setError(getLibraryErrorMessage(error, 'Nie udało się zastosować sugestii.'))
+        } finally {
+            setRunSuggestionMode(null)
+        }
+    }
+
+    const buttonsDisabled = entry === null || entry === undefined
+
+    return (
+        <>
+            <div className="self-center md:text-right">
+                <button
+                    type="button"
+                    onClick={handleToggleEdit}
+                    disabled={buttonsDisabled}
+                    className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    {isEditing ? 'Zamknij' : 'Edytuj'}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setIsShowingRuns((current) => !current)}
+                    disabled={buttonsDisabled}
+                    className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 md:mt-0 md:ml-2"
+                >
+                    {isShowingRuns ? 'Ukryj runy' : 'Runy'}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setIsShowingAccess((current) => !current)}
+                    disabled={buttonsDisabled}
+                    className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 md:mt-0 md:ml-2"
+                >
+                    {isShowingAccess ? 'Ukryj dostęp' : 'Dostęp'}
+                </button>
+                {isConfirmingDelete ? (
+                    <button
+                        type="button"
+                        onClick={() => void handleDelete()}
+                        disabled={isDeleting || buttonsDisabled}
+                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-500 px-3 text-sm font-semibold text-red-50 transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60 md:mt-0 md:ml-2"
+                    >
+                        {isDeleting ? 'Usuwanie...' : 'Potwierdź'}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setIsConfirmingDelete(true)
+                            setIsEditing(false)
+                            setError(null)
+                        }}
+                        disabled={buttonsDisabled}
+                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-950/60 px-3 text-sm font-medium text-red-200 transition hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-60 md:mt-0 md:ml-2"
+                    >
+                        Usuń
+                    </button>
+                )}
+            </div>
+
+            {error && !isEditing ? (
+                <p className="mt-2 text-sm text-red-300">{error}</p>
+            ) : null}
+            {message && !isEditing ? (
+                <p className="mt-2 text-sm text-teal-200">{message}</p>
+            ) : null}
+
+            {runSuggestion && !isEditing && entry ? (
+                <div className="mt-3 rounded-md border border-teal-900/70 bg-teal-950/30 p-3">
+                    <p className="text-sm text-teal-100">{runSuggestion}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {suggestedRunStatus && entry.lastRunId ? (
+                            <button
+                                type="button"
+                                onClick={() => void handleRunSuggestion('latest')}
+                                disabled={runSuggestionMode !== null}
+                                className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {runSuggestionMode === 'latest'
+                                    ? 'Aktualizuję...'
+                                    : getRunSuggestionActionLabel(
+                                          'latest',
+                                          suggestedRunStatus,
+                                      )}
+                            </button>
+                        ) : null}
+                        {suggestedRunStatus ? (
+                            <button
+                                type="button"
+                                onClick={() => void handleRunSuggestion('new')}
+                                disabled={runSuggestionMode !== null}
+                                className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-100 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {runSuggestionMode === 'new'
+                                    ? 'Tworzę...'
+                                    : getRunSuggestionActionLabel(
+                                          'new',
+                                          suggestedRunStatus,
+                                      )}
+                            </button>
+                        ) : null}
+                        <button
+                            type="button"
+                            onClick={() => setIsShowingRuns(true)}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200"
+                        >
+                            Pokaż runy
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setRunSuggestion(null)
+                                setSuggestedRunStatus(null)
+                            }}
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
+                        >
+                            Zamknij sugestię
+                        </button>
+                    </div>
+                </div>
+            ) : null}
+
+            {isEditing && entry ? (
+                <form
+                    onSubmit={(event) => void handleSubmit(event)}
+                    className="mt-3 space-y-3 rounded-md border border-zinc-800 bg-zinc-950/60 p-3"
+                >
+                    <div
+                        className={`grid gap-4 ${
+                            showsInterest ? 'md:grid-cols-[minmax(0,1fr)_14rem]' : ''
+                        }`}
+                    >
+                        <div className="space-y-1.5">
+                            <label
+                                htmlFor={`library-edit-status-${entry._id}`}
+                                className="text-sm text-zinc-300"
+                            >
+                                Status
+                            </label>
+                            <select
+                                id={`library-edit-status-${entry._id}`}
+                                value={status}
+                                onChange={(event) =>
+                                    setStatus(event.target.value as UserGameStatus)
+                                }
+                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
+                            >
+                                {statusOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {showsInterest ? (
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between gap-3">
+                                    <label
+                                        htmlFor={`library-edit-interest-${entry._id}`}
+                                        className="text-sm text-zinc-300"
+                                    >
+                                        Zainteresowanie
+                                    </label>
+                                    <span className="text-sm font-medium text-zinc-100">
+                                        {interest}
+                                    </span>
+                                </div>
+                                <input
+                                    id={`library-edit-interest-${entry._id}`}
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={interest}
+                                    onChange={(event) =>
+                                        setInterest(Number(event.target.value))
+                                    }
+                                    className="h-10 w-full accent-teal-300"
+                                />
+                            </div>
+                        ) : null}
+                    </div>
+
+                    {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-teal-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
+                        >
+                            Anuluj
+                        </button>
+                    </div>
+                </form>
+            ) : null}
+
+            {isShowingRuns ? <RunsPanel userGameId={userGameId} /> : null}
+            {isShowingAccess ? <AccessPanel userGameId={userGameId} /> : null}
+        </>
+    )
 }
 
 const RunListItem = ({ run }: { run: GameRun }) => {
@@ -2369,108 +2769,6 @@ const AccessPanel = ({ userGameId }: { userGameId: Id<'userGames'> }) => {
 }
 
 const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
-    const updateLibraryGame = useMutation(api.library.updateLibraryGame)
-    const removeGameFromLibrary = useMutation(api.library.removeGameFromLibrary)
-    const applyRunSuggestion = useMutation(api.library.applyRunSuggestion)
-    const [isEditing, setIsEditing] = useState(false)
-    const [isShowingRuns, setIsShowingRuns] = useState(false)
-    const [isShowingAccess, setIsShowingAccess] = useState(false)
-    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false)
-    const [status, setStatus] = useState<UserGameStatus>(entry.status)
-    const [interest, setInterest] = useState(entry.interest)
-    const [runSuggestion, setRunSuggestion] = useState<string | null>(null)
-    const [suggestedRunStatus, setSuggestedRunStatus] = useState<GameRunStatus | null>(
-        null,
-    )
-    const [error, setError] = useState<string | null>(null)
-    const [message, setMessage] = useState<string | null>(null)
-    const [isSubmitting, setIsSubmitting] = useState(false)
-    const [isDeleting, setIsDeleting] = useState(false)
-    const [runSuggestionMode, setRunSuggestionMode] = useState<'latest' | 'new' | null>(
-        null,
-    )
-    const showsInterest = shouldShowInterest(status)
-
-    const handleCancel = () => {
-        setStatus(entry.status)
-        setInterest(entry.interest)
-        setRunSuggestion(null)
-        setSuggestedRunStatus(null)
-        setError(null)
-        setMessage(null)
-        setIsEditing(false)
-    }
-
-    const handleSubmit = async (event: FormEvent) => {
-        event.preventDefault()
-        setError(null)
-        setMessage(null)
-        setIsSubmitting(true)
-
-        try {
-            const nextRunSuggestion =
-                status !== entry.status ? getRunSuggestionForGameStatus(status) : null
-            const nextSuggestedRunStatus =
-                status !== entry.status ? getSuggestedRunStatus(status) : null
-
-            await updateLibraryGame({
-                userGameId: entry._id,
-                status,
-                interest: showsInterest ? interest : 0,
-            })
-            setRunSuggestion(nextRunSuggestion)
-            setSuggestedRunStatus(nextSuggestedRunStatus)
-            if (nextRunSuggestion) {
-                setIsShowingRuns(true)
-            }
-            setIsEditing(false)
-        } catch (error) {
-            setError(getLibraryErrorMessage(error, 'Nie udało się zapisać zmian.'))
-        } finally {
-            setIsSubmitting(false)
-        }
-    }
-
-    const handleDelete = async () => {
-        setError(null)
-        setMessage(null)
-        setIsDeleting(true)
-
-        try {
-            await removeGameFromLibrary({ userGameId: entry._id })
-        } catch (error) {
-            setError(getLibraryErrorMessage(error, 'Nie udało się usunąć gry z kupki.'))
-        } finally {
-            setIsDeleting(false)
-        }
-    }
-
-    const handleRunSuggestion = async (mode: 'latest' | 'new') => {
-        if (!suggestedRunStatus) return
-
-        setError(null)
-        setMessage(null)
-        setRunSuggestionMode(mode)
-
-        try {
-            await applyRunSuggestion({
-                userGameId: entry._id,
-                status: suggestedRunStatus,
-                mode,
-            })
-            setMessage(
-                mode === 'latest' ? 'Zaktualizowano ostatni run.' : 'Utworzono nowy run.',
-            )
-            setRunSuggestion(null)
-            setSuggestedRunStatus(null)
-            setIsShowingRuns(true)
-        } catch (error) {
-            setError(getLibraryErrorMessage(error, 'Nie udało się zastosować sugestii.'))
-        } finally {
-            setRunSuggestionMode(null)
-        }
-    }
-
     return (
         <li className="bg-zinc-900/50 px-4 py-3">
             <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_8rem_8rem]">
@@ -2501,204 +2799,8 @@ const LibraryEntryRow = ({ entry }: { entry: LibraryEntry }) => {
                 ) : (
                     <p className="self-center text-sm text-zinc-500">Bez priorytetu</p>
                 )}
-                <div className="self-center md:text-right">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsEditing((current) => !current)
-                            setIsConfirmingDelete(false)
-                            setError(null)
-                        }}
-                        className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
-                    >
-                        {isEditing ? 'Zamknij' : 'Edytuj'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setIsShowingRuns((current) => !current)}
-                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 md:mt-0 md:ml-2"
-                    >
-                        {isShowingRuns ? 'Ukryj runy' : 'Runy'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setIsShowingAccess((current) => !current)}
-                        className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700 md:mt-0 md:ml-2"
-                    >
-                        {isShowingAccess ? 'Ukryj dostęp' : 'Dostęp'}
-                    </button>
-                    {isConfirmingDelete ? (
-                        <button
-                            type="button"
-                            onClick={() => void handleDelete()}
-                            disabled={isDeleting}
-                            className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-500 px-3 text-sm font-semibold text-red-50 transition hover:bg-red-400 disabled:cursor-not-allowed disabled:opacity-60 md:mt-0 md:ml-2"
-                        >
-                            {isDeleting ? 'Usuwanie...' : 'Potwierdź'}
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsConfirmingDelete(true)
-                                setIsEditing(false)
-                                setError(null)
-                            }}
-                            className="mt-2 inline-flex h-9 items-center justify-center rounded-md bg-red-950/60 px-3 text-sm font-medium text-red-200 transition hover:bg-red-900 md:mt-0 md:ml-2"
-                        >
-                            Usuń
-                        </button>
-                    )}
-                </div>
+                <UserGameActions userGameId={entry._id} initialEntry={entry} />
             </div>
-
-            {error && !isEditing ? (
-                <p className="mt-2 text-sm text-red-300">{error}</p>
-            ) : null}
-            {message && !isEditing ? (
-                <p className="mt-2 text-sm text-teal-200">{message}</p>
-            ) : null}
-
-            {runSuggestion && !isEditing ? (
-                <div className="mt-3 rounded-md border border-teal-900/70 bg-teal-950/30 p-3">
-                    <p className="text-sm text-teal-100">{runSuggestion}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                        {suggestedRunStatus && entry.lastRunId ? (
-                            <button
-                                type="button"
-                                onClick={() => void handleRunSuggestion('latest')}
-                                disabled={runSuggestionMode !== null}
-                                className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {runSuggestionMode === 'latest'
-                                    ? 'Aktualizuję...'
-                                    : getRunSuggestionActionLabel(
-                                          'latest',
-                                          suggestedRunStatus,
-                                      )}
-                            </button>
-                        ) : null}
-                        {suggestedRunStatus ? (
-                            <button
-                                type="button"
-                                onClick={() => void handleRunSuggestion('new')}
-                                disabled={runSuggestionMode !== null}
-                                className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-100 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                                {runSuggestionMode === 'new'
-                                    ? 'Tworzę...'
-                                    : getRunSuggestionActionLabel(
-                                          'new',
-                                          suggestedRunStatus,
-                                      )}
-                            </button>
-                        ) : null}
-                        <button
-                            type="button"
-                            onClick={() => setIsShowingRuns(true)}
-                            className="inline-flex h-8 items-center justify-center rounded-md bg-teal-300 px-2.5 text-xs font-semibold text-zinc-950 transition hover:bg-teal-200"
-                        >
-                            Pokaż runy
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setRunSuggestion(null)
-                                setSuggestedRunStatus(null)
-                            }}
-                            className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
-                        >
-                            Zamknij sugestię
-                        </button>
-                    </div>
-                </div>
-            ) : null}
-
-            {isEditing ? (
-                <form
-                    onSubmit={(event) => void handleSubmit(event)}
-                    className="mt-3 space-y-3 rounded-md border border-zinc-800 bg-zinc-950/60 p-3"
-                >
-                    <div
-                        className={`grid gap-4 ${
-                            showsInterest ? 'md:grid-cols-[minmax(0,1fr)_14rem]' : ''
-                        }`}
-                    >
-                        <div className="space-y-1.5">
-                            <label
-                                htmlFor={`library-edit-status-${entry._id}`}
-                                className="text-sm text-zinc-300"
-                            >
-                                Status
-                            </label>
-                            <select
-                                id={`library-edit-status-${entry._id}`}
-                                value={status}
-                                onChange={(event) =>
-                                    setStatus(event.target.value as UserGameStatus)
-                                }
-                                className="h-10 w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
-                            >
-                                {statusOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {showsInterest ? (
-                            <div className="space-y-1.5">
-                                <div className="flex items-center justify-between gap-3">
-                                    <label
-                                        htmlFor={`library-edit-interest-${entry._id}`}
-                                        className="text-sm text-zinc-300"
-                                    >
-                                        Zainteresowanie
-                                    </label>
-                                    <span className="text-sm font-medium text-zinc-100">
-                                        {interest}
-                                    </span>
-                                </div>
-                                <input
-                                    id={`library-edit-interest-${entry._id}`}
-                                    type="range"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    value={interest}
-                                    onChange={(event) =>
-                                        setInterest(Number(event.target.value))
-                                    }
-                                    className="h-10 w-full accent-teal-300"
-                                />
-                            </div>
-                        ) : null}
-                    </div>
-
-                    {error ? <p className="text-sm text-red-300">{error}</p> : null}
-
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="inline-flex h-9 items-center justify-center rounded-md bg-teal-300 px-3 text-sm font-semibold text-zinc-950 transition hover:bg-teal-200 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            {isSubmitting ? 'Zapisywanie...' : 'Zapisz'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            className="inline-flex h-9 items-center justify-center rounded-md bg-zinc-800 px-3 text-sm font-medium text-zinc-100 transition hover:bg-zinc-700"
-                        >
-                            Anuluj
-                        </button>
-                    </div>
-                </form>
-            ) : null}
-
-            {isShowingRuns ? <RunsPanel userGameId={entry._id} /> : null}
-            {isShowingAccess ? <AccessPanel userGameId={entry._id} /> : null}
         </li>
     )
 }

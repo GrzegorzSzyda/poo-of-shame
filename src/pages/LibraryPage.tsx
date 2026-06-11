@@ -893,18 +893,16 @@ const ActiveRunsPanel = () => {
                                     </div>
                                 </div>
 
-                                <div className="mt-3 border-t border-zinc-800 pt-3">
-                                    <UserGameActions
-                                        userGameId={run.userGameId}
-                                        initialEntry={{
-                                            _id: run.userGameId,
-                                            status: run.userGameStatus ?? 'wanted',
-                                            interest: run.interest ?? 0,
-                                            lastRunId: run.lastRunId,
-                                            game: run.game,
-                                        }}
-                                    />
-                                </div>
+                                <UserGameActionsDisclosure
+                                    userGameId={run.userGameId}
+                                    initialEntry={{
+                                        _id: run.userGameId,
+                                        status: run.userGameStatus ?? 'wanted',
+                                        interest: run.interest ?? 0,
+                                        lastRunId: run.lastRunId,
+                                        game: run.game,
+                                    }}
+                                />
 
                                 {run.note?.trim() ? (
                                     <p className="mt-3 text-sm text-zinc-400">
@@ -1001,18 +999,16 @@ const HistorySection = ({
                             </div>
                         </div>
 
-                        <div className="mt-3 border-t border-zinc-800 pt-3">
-                            <UserGameActions
-                                userGameId={run.userGameId}
-                                initialEntry={{
-                                    _id: run.userGameId,
-                                    status: run.userGameStatus ?? 'wanted',
-                                    interest: run.interest ?? 0,
-                                    lastRunId: run.lastRunId,
-                                    game: run.game,
-                                }}
-                            />
-                        </div>
+                        <UserGameActionsDisclosure
+                            userGameId={run.userGameId}
+                            initialEntry={{
+                                _id: run.userGameId,
+                                status: run.userGameStatus ?? 'wanted',
+                                interest: run.interest ?? 0,
+                                lastRunId: run.lastRunId,
+                                game: run.game,
+                            }}
+                        />
 
                         {run.note?.trim() ? (
                             <p className="mt-3 text-sm text-zinc-400">{run.note}</p>
@@ -1290,28 +1286,25 @@ const ReleaseCalendarPanel = () => {
                                 </div>
 
                                 {item.userGameId ? (
-                                    <div className="mt-3 border-t border-zinc-800 pt-3">
-                                        <UserGameActions
-                                            userGameId={item.userGameId}
-                                            initialEntry={{
-                                                _id: item.userGameId,
-                                                status: item.userGameStatus ?? 'wanted',
-                                                interest: item.interest ?? 0,
-                                                lastRunId: item.lastRunId,
-                                                game: {
-                                                    _id: item.gameId,
-                                                    title: item.title,
-                                                    releaseDate: item.releaseDate,
-                                                    releaseYear: item.releaseYear,
-                                                    releaseQuarter: item.releaseQuarter,
-                                                    releaseYearMonth:
-                                                        item.releaseYearMonth,
-                                                    releaseText: item.releaseText,
-                                                    coverImageUrl: item.coverImageUrl,
-                                                },
-                                            }}
-                                        />
-                                    </div>
+                                    <UserGameActionsDisclosure
+                                        userGameId={item.userGameId}
+                                        initialEntry={{
+                                            _id: item.userGameId,
+                                            status: item.userGameStatus ?? 'wanted',
+                                            interest: item.interest ?? 0,
+                                            lastRunId: item.lastRunId,
+                                            game: {
+                                                _id: item.gameId,
+                                                title: item.title,
+                                                releaseDate: item.releaseDate,
+                                                releaseYear: item.releaseYear,
+                                                releaseQuarter: item.releaseQuarter,
+                                                releaseYearMonth: item.releaseYearMonth,
+                                                releaseText: item.releaseText,
+                                                coverImageUrl: item.coverImageUrl,
+                                            },
+                                        }}
+                                    />
                                 ) : null}
                             </li>
                         ))}
@@ -1879,6 +1872,37 @@ const UserGameActions = ({
             {isShowingRuns ? <RunsPanel userGameId={userGameId} /> : null}
             {isShowingAccess ? <AccessPanel userGameId={userGameId} /> : null}
         </>
+    )
+}
+
+const UserGameActionsDisclosure = ({
+    userGameId,
+    initialEntry,
+}: {
+    userGameId: Id<'userGames'>
+    initialEntry?: UserGameActionEntry
+}) => {
+    const [isOpen, setIsOpen] = useState(false)
+
+    return (
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+            <button
+                type="button"
+                onClick={() => setIsOpen((current) => !current)}
+                className="inline-flex h-8 items-center justify-center rounded-md bg-zinc-800 px-2.5 text-xs font-medium text-zinc-100 transition hover:bg-zinc-700"
+            >
+                {isOpen ? 'Ukryj akcje' : 'Akcje'}
+            </button>
+
+            {isOpen ? (
+                <div className="mt-3">
+                    <UserGameActions
+                        userGameId={userGameId}
+                        initialEntry={initialEntry}
+                    />
+                </div>
+            ) : null}
+        </div>
     )
 }
 
